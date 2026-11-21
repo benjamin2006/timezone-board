@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>世界时区竖排看板</title>
+<style>
+/* ===== 主题变量 ===== */
+:root{
+  --bg:#0a0d13;
+  --glow1:rgba(92,200,255,.14);
+  --glow2:rgba(255,207,92,.08);
+  --text:#e9eff8;
+  --dim:#8695ab;
+  --card:rgba(255,255,255,.045);
+  --card-hi:rgba(255,255,255,.09);
+  --line:rgba(255,255,255,.10);
+  --accent:#5cc8ff;
+  --accent-soft:rgba(92,200,255,.10);
+  --accent-line:rgba(92,200,255,.28);
+  --warn:#ffcf5c;
+  --danger:#ff8080;
+}
+[data-theme="light"]{
+  --bg:#f2f6fb;
+  --glow1:rgba(30,140,220,.10);
+  --glow2:rgba(220,170,40,.08);
+  --text:#0e1726;
+  --dim:#5b6b80;
+  --card:rgba(255,255,255,.72);
+  --card-hi:rgba(255,255,255,.95);
+  --line:rgba(14,23,38,.10);
+  --accent:#0d76c0;
+  --accent-soft:rgba(13,118,192,.08);
+  --accent-line:rgba(13,118,192,.24);
+  --warn:#a8720b;
+  --danger:#c33;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  min-height:100vh;
+  background:
+    radial-gradient(1100px 560px at 18% -8%, var(--glow1), transparent 62%),
+    radial-gradient(880px 480px at 102% -2%, var(--glow2), transparent 60%),
+    var(--bg);
+  color:var(--text);
+  font-family:"Inter","Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  display:flex;
+  justify-content:center;
+  padding:clamp(14px,3vw,40px);
+}
+
+.app{width:100%;max-width:760px;display:flex;flex-direction:column;min-height:100%}
+
+/* ===== 顶部 ===== */
+.hero{
+  display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:16px;
+}
+.hero-local .lbl{
+  font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:4px;
+}
+.hero-local .big{
+  font-size:clamp(30px,7vw,44px);font-weight:700;line-height:1.04;
+  font-variant-numeric:tabular-nums;font-feature-settings:"tnum";letter-spacing:-.02em;
+}
+.hero-local .sub{font-size:12.5px;color:var(--dim);margin-top:5px}
+
+.toggles{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding-bottom:2px}
+.chip{
+  appearance:none;-webkit-appearance:none;font:inherit;font-size:12px;cursor:pointer;
+  padding:7px 12px;border-radius:999px;
+  border:1px solid var(--line);background:var(--card);color:var(--dim);
+  transition:.18s ease;
+}
+.chip:hover{color:var(--text);border-color:var(--accent-line)}
+.chip[aria-pressed="true"]{color:var(--text);border-color:var(--accent-line);background:var(--accent-soft)}
+
+/* ===== 添加栏 ===== */
+.adder{position:relative;display:flex;gap:10px}
+#q{
+  flex:1;min-width:0;font:inherit;font-size:14.5px;
+  padding:13px 16px;border-radius:13px;
+  border:1px solid var(--line);background:var(--card);color:var(--text);
+  outline:none;transition:.18s;
+}
+#q::placeholder{color:var(--dim)}
+#q:focus{border-color:var(--accent-line);background:var(--card-hi);box-shadow:0 0 0 3px var(--accent-soft)}
+.add{
+  font:inherit;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;
+  padding:13px 20px;border-radius:13px;border:1px solid var(--accent-line);
+  background:linear-gradient(180deg,rgba(92,200,255,.22),rgba(92,200,255,.10));
+  color:var(--text);transition:.18s;
+}
+[data-theme="light"] .add{background:linear-gradient(180deg,rgba(13,118,192,.16),rgba(13,118,192,.08))}
+.add:hover{filter:brightness(1.15)}
+.add:active{transform:translateY(1px)}
+
+.suggest{
+  position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:30;
+  background:var(--bg);border:1px solid var(--line);border-radius:13px;
+  box-shadow:0 18px 44px rgba(0,0,0,.42);overflow:hidden;max-height:320px;overflow-y:auto;
+}
+[data-theme="light"] .suggest{background:#fff;box-shadow:0 18px 40px rgba(20,40,70,.22)}
+.sug{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;
+  font:inherit;padding:10px 14px;background:transparent;border:0;border-bottom:1px solid var(--line);
+  color:var(--text);
+}
+.sug:last-child{border-bottom:0}
+.sug:hover,.sug:focus-visible{background:var(--card-hi);outline:none}
+.s-name{font-size:14px;font-weight:600}
+.s-meta{font-size:11.5px;color:var(--dim);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.s-off{font-size:11.5px;color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.hint{
+  font-size:12px;color:var(--dim);padding:10px 4px 4px;min-height:20px;transition:color .2s;
+}
+.hint.flash{color:var(--accent)}
+
+/* ===== 列表 ===== */
+.board{flex:1;padding-bottom:8px}
+.empty{
+  border:1px dashed var(--line);border-radius:16px;padding:36px 20px;text-align:center;
+  color:var(--dim);font-size:13.5px;
+}
+
+.grp{margin-bottom:6px}
+.grp-head{display:flex;align-items:center;gap:10px;padding:12px 2px 9px}
+.grp-head .utc{
+  font-size:11.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);
+  font-variant-numeric:tabular-nums;
+  padding:3px 9px;border-radius:999px;background:var(--accent-soft);border:1px solid var(--accent-line);
+}
+.grp-head .cnt{font-size:11.5px;color:var(--dim);white-space:nowrap}
+.grp-head .rule{flex:1;height:1px;background:var(--line)}
+
+.cards{display:flex;flex-direction:column;gap:8px}
+
+.card{
+  display:grid;grid-template-columns:minmax(0,1fr) auto auto;
+  align-items:center;gap:6px 14px;
+  padding:13px 14px;border-radius:15px;
+  background:var(--card);border:1px solid var(--line);
+  transition:.18s ease;
+}
+.card:hover{background:var(--card-hi);border-color:var(--accent-line)}
+.card.local{border-color:rgba(255,207,92,.38);background:rgba(255,207,92,.07)}
+[data-theme="light"] .card.local{background:rgba(200,150,20,.10)}
+
+.info{min-width:0}
+.city-line{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
+.city-name{font-size:16px;font-weight:650;letter-spacing:-.01em}
+.badge{
+  font-size:10.5px;line-height:1.5;padding:1px 6px;border-radius:5px;
+  background:rgba(128,160,200,.14);color:var(--dim);white-space:nowrap;
+}
+.badge.cap{color:var(--warn);background:rgba(255,207,92,.14)}
+.badge.me{color:var(--accent);background:var(--accent-soft)}
+
+.date-line{margin-top:5px;font-size:12px;color:var(--dim);display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.date-line .diff{color:var(--accent);font-variant-numeric:tabular-nums}
+
+.time{
+  font-size:clamp(21px,5vw,29px);font-weight:680;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;font-feature-settings:"tnum";white-space:nowrap;
+}
+.time .sec{font-size:.6em;font-weight:500;color:var(--dim)}
+.time .ampm{font-size:.45em;font-weight:600;color:var(--dim);margin-left:3px;letter-spacing:.04em}
+
+.rowend{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.ts{
+  font-size:10.5px;color:var(--dim);text-decoration:none;white-space:nowrap;
+  border-bottom:1px dotted transparent;padding-bottom:1px;
+}
+.ts:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.del{
+  width:20px;height:20px;padding:0;line-height:18px;font-size:15px;cursor:pointer;
+  border-radius:6px;border:1px solid transparent;background:transparent;color:var(--dim);
+  opacity:.5;transition:.15s;
+}
+.del:hover{opacity:1;color:var(--danger);border-color:rgba(255,128,128,.42);background:rgba(255,128,128,.10)}
+
+/* ===== 页脚 ===== */
+.foot{
+  margin-top:22px;padding-top:14px;border-top:1px solid var(--line);
+  font-size:11.5px;line-height:1.75;color:var(--dim);
+}
+.foot p{margin:0 0 4px}
+.foot b{color:var(--text);font-weight:600}
+
+@media (max-width:520px){
+  .card{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"info time" "rowend rowend";padding:12px}
+  .info{grid-area:info}
+  .time{grid-area:time}
+  .rowend{grid-area:rowend;flex-direction:row;justify-content:space-between;align-items:center;margin-top:2px}
+  .date-line{font-size:11.5px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="hero">
+    <div class="hero-local">
+      <div class="lbl">本机时间 · <span id="localTzName">--</span></div>
+      <div class="big" id="heroClock">--:--</div>
+      <div class="sub" id="heroSub"></div>
+    </div>
+    <div class="toggles">
+      <button class="chip" id="btnOrder" aria-pressed="false">UTC ↑</button>
+      <button class="chip" id="btnHour" aria-pressed="false">24 小时</button>
+      <button class="chip" id="btnSec" aria-pressed="false">显示秒</button>
+      <button class="chip" id="btnTheme" aria-pressed="true">深色</button>
+    </div>
+  </header>
+
+  <div class="adder">
+    <input id="q" type="text" autocomplete="off" spellcheck="false" enterkeyhint="done"
+           placeholder="输入城市 / 国家 / 时区，如 纽约、马尔代夫、Asia/Tokyo">
+    <button class="add" id="addBtn">添加</button>
+    <div class="suggest" id="suggest" hidden></div>
+  </div>
+  <div class="hint" id="hint">按 UTC 偏移自动竖排 · 列表保存在本机浏览器</div>
+
+  <main class="board" id="board"></main>
+
+  <footer class="foot">
+    <p>时间由浏览器内置 IANA 时区数据库计算，含夏令时规则，<b>无需联网</b>；点每条右侧的 time.is ↗ 可到 time.is 对应页面核对。</p>
+    <p>共 <span id="count">0</span> 个地区 · 夏令时切换后排序与时差自动更新</p>
+  </footer>
+
+</div>
+
+<script>
+'use strict';
+
+/* =========================================================
+   1. 城市 / 首都 数据库（zh|en|国家|IANA 时区|是否首都）
+   ========================================================= */
+const RAW_CITY = `
+北京|Beijing|中国|Asia/Shanghai|1
+上海|Shanghai|中国|Asia/Shanghai|
+广州|Guangzhou|中国|Asia/Shanghai|
+深圳|Shenzhen|中国|Asia/Shanghai|
+成都|Chengdu|中国|Asia/Shanghai|
+重庆|Chongqing|中国|Asia/Shanghai|
+杭州|Hangzhou|中国|Asia/Shanghai|
+武汉|Wuhan|中国|Asia/Shanghai|
+西安|Xi'an|中国|Asia/Shanghai|
+南京|Nanjing|中国|Asia/Shanghai|
+天津|Tianjin|中国|Asia/Shanghai|
+苏州|Suzhou|中国|Asia/Shanghai|
+厦门|Xiamen|中国|Asia/Shanghai|
+青岛|Qingdao|中国|Asia/Shanghai|
+长沙|Changsha|中国|Asia/Shanghai|
+郑州|Zhengzhou|中国|Asia/Shanghai|
+昆明|Kunming|中国|Asia/Shanghai|
+大连|Dalian|中国|Asia/Shanghai|
+宁波|Ningbo|中国|Asia/Shanghai|
+福州|Fuzhou|中国|Asia/Shanghai|
+合肥|Hefei|中国|Asia/Shanghai|
+济南|Jinan|中国|Asia/Shanghai|
+南宁|Nanning|中国|Asia/Shanghai|
+哈尔滨|Harbin|中国|Asia/Shanghai|
+沈阳|Shenyang|中国|Asia/Shanghai|
+长春|Changchun|中国|Asia/Shanghai|
+石家庄|Shijiazhuang|中国|Asia/Shanghai|
+太原|Taiyuan|中国|Asia/Shanghai|
+兰州|Lanzhou|中国|Asia/Shanghai|
+贵阳|Guiyang|中国|Asia/Shanghai|
+海口|Haikou|中国|Asia/Shanghai|
+三亚|Sanya|中国|Asia/Shanghai|
+珠海|Zhuhai|中国|Asia/Shanghai|
+东莞|Dongguan|中国|Asia/Shanghai|
+佛山|Foshan|中国|Asia/Shanghai|
+无锡|Wuxi|中国|Asia/Shanghai|
+温州|Wenzhou|中国|Asia/Shanghai|
+泉州|Quanzhou|中国|Asia/Shanghai|
+汕头|Shantou|中国|Asia/Shanghai|
+潮州|Chaozhou|中国|Asia/Shanghai|
+揭阳|Jieyang|中国|Asia/Shanghai|
+乌鲁木齐|Urumqi|中国|Asia/Urumqi|
+香港|Hong Kong|中国香港|Asia/Hong_Kong|
+澳门|Macau|中国澳门|Asia/Macau|
+台北|Taipei|中国台湾|Asia/Taipei|
+东京|Tokyo|日本|Asia/Tokyo|1
+大阪|Osaka|日本|Asia/Tokyo|
+首尔|Seoul|韩国|Asia/Seoul|1
+釜山|Busan|韩国|Asia/Seoul|
+平壤|Pyongyang|朝鲜|Asia/Pyongyang|1
+乌兰巴托|Ulaanbaatar|蒙古|Asia/Ulaanbaatar|1
+新加坡|Singapore|新加坡|Asia/Singapore|1
+吉隆坡|Kuala Lumpur|马来西亚|Asia/Kuala_Lumpur|1
+曼谷|Bangkok|泰国|Asia/Bangkok|1
+雅加达|Jakarta|印度尼西亚|Asia/Jakarta|1
+登巴萨|Denpasar|印度尼西亚|Asia/Makassar|
+马尼拉|Manila|菲律宾|Asia/Manila|1
+宿务|Cebu|菲律宾|Asia/Manila|
+河内|Hanoi|越南|Asia/Ho_Chi_Minh|1
+胡志明市|Ho Chi Minh City|越南|Asia/Ho_Chi_Minh|
+金边|Phnom Penh|柬埔寨|Asia/Phnom_Penh|1
+万象|Vientiane|老挝|Asia/Vientiane|1
+仰光|Yangon|缅甸|Asia/Yangon|1
+达卡|Dhaka|孟加拉国|Asia/Dhaka|1
+加德满都|Kathmandu|尼泊尔|Asia/Kathmandu|1
+新德里|New Delhi|印度|Asia/Kolkata|1
+孟买|Mumbai|印度|Asia/Kolkata|
+班加罗尔|Bangalore|印度|Asia/Kolkata|
+科伦坡|Colombo|斯里兰卡|Asia/Colombo|1
+马累|Malé|马尔代夫|Indian/Maldives|1
+伊斯兰堡|Islamabad|巴基斯坦|Asia/Karachi|1
+卡拉奇|Karachi|巴基斯坦|Asia/Karachi|
+喀布尔|Kabul|阿富汗|Asia/Kabul|1
+德黑兰|Tehran|伊朗|Asia/Tehran|1
+迪拜|Dubai|阿联酋|Asia/Dubai|
+阿布扎比|Abu Dhabi|阿联酋|Asia/Dubai|1
+多哈|Doha|卡塔尔|Asia/Qatar|1
+利雅得|Riyadh|沙特阿拉伯|Asia/Riyadh|1
+吉达|Jeddah|沙特阿拉伯|Asia/Riyadh|
+科威特城|Kuwait City|科威特|Asia/Kuwait|1
+麦纳麦|Manama|巴林|Asia/Bahrain|1
+马斯喀特|Muscat|阿曼|Asia/Muscat|1
+安曼|Amman|约旦|Asia/Amman|1
+贝鲁特|Beirut|黎巴嫩|Asia/Beirut|1
+耶路撒冷|Jerusalem|以色列|Asia/Jerusalem|1
+巴格达|Baghdad|伊拉克|Asia/Baghdad|1
+伊斯坦布尔|Istanbul|土耳其|Europe/Istanbul|
+安卡拉|Ankara|土耳其|Europe/Istanbul|1
+第比利斯|Tbilisi|格鲁吉亚|Asia/Tbilisi|1
+埃里温|Yerevan|亚美尼亚|Asia/Yerevan|1
+巴库|Baku|阿塞拜疆|Asia/Baku|1
+莫斯科|Moscow|俄罗斯|Europe/Moscow|1
+圣彼得堡|Saint Petersburg|俄罗斯|Europe/Moscow|
+新西伯利亚|Novosibirsk|俄罗斯|Asia/Novosibirsk|
+符拉迪沃斯托克|Vladivostok|俄罗斯|Asia/Vladivostok|
+基辅|Kyiv|乌克兰|Europe/Kyiv|1
+明斯克|Minsk|白俄罗斯|Europe/Minsk|1
+阿斯塔纳|Astana|哈萨克斯坦|Asia/Almaty|1
+阿拉木图|Almaty|哈萨克斯坦|Asia/Almaty|
+塔什干|Tashkent|乌兹别克斯坦|Asia/Tashkent|1
+阿什哈巴德|Ashgabat|土库曼斯坦|Asia/Ashgabat|1
+比什凯克|Bishkek|吉尔吉斯斯坦|Asia/Bishkek|1
+杜尚别|Dushanbe|塔吉克斯坦|Asia/Dushanbe|1
+伦敦|London|英国|Europe/London|1
+曼彻斯特|Manchester|英国|Europe/London|
+都柏林|Dublin|爱尔兰|Europe/Dublin|1
+巴黎|Paris|法国|Europe/Paris|1
+柏林|Berlin|德国|Europe/Berlin|1
+慕尼黑|Munich|德国|Europe/Berlin|
+法兰克福|Frankfurt|德国|Europe/Berlin|
+阿姆斯特丹|Amsterdam|荷兰|Europe/Amsterdam|1
+鹿特丹|Rotterdam|荷兰|Europe/Amsterdam|
+布鲁塞尔|Brussels|比利时|Europe/Brussels|1
+卢森堡|Luxembourg|卢森堡|Europe/Luxembourg|1
+苏黎世|Zurich|瑞士|Europe/Zurich|
+日内瓦|Geneva|瑞士|Europe/Zurich|
+维也纳|Vienna|奥地利|Europe/Vienna|1
+罗马|Rome|意大利|Europe/Rome|1
+米兰|Milan|意大利|Europe/Rome|
+马德里|Madrid|西班牙|Europe/Madrid|1
+巴塞罗那|Barcelona|西班牙|Europe/Madrid|
+里斯本|Lisbon|葡萄牙|Europe/Lisbon|1
+斯德哥尔摩|Stockholm|瑞典|Europe/Stockholm|1
+奥斯陆|Oslo|挪威|Europe/Oslo|1
+哥本哈根|Copenhagen|丹麦|Europe/Copenhagen|1
+赫尔辛基|Helsinki|芬兰|Europe/Helsinki|1
+雷克雅未克|Reykjavik|冰岛|Atlantic/Reykjavik|1
+华沙|Warsaw|波兰|Europe/Warsaw|1
+布拉格|Prague|捷克|Europe/Prague|1
+布达佩斯|Budapest|匈牙利|Europe/Budapest|1
+雅典|Athens|希腊|Europe/Athens|1
+布加勒斯特|Bucharest|罗马尼亚|Europe/Bucharest|1
+索菲亚|Sofia|保加利亚|Europe/Sofia|1
+贝尔格莱德|Belgrade|塞尔维亚|Europe/Belgrade|1
+萨格勒布|Zagreb|克罗地亚|Europe/Zagreb|1
+斯科普里|Skopje|北马其顿|Europe/Skopje|1
+地拉那|Tirana|阿尔巴尼亚|Europe/Tirane|1
+里加|Riga|拉脱维亚|Europe/Riga|1
+维尔纽斯|Vilnius|立陶宛|Europe/Vilnius|1
+塔林|Tallinn|爱沙尼亚|Europe/Tallinn|1
+开罗|Cairo|埃及|Africa/Cairo|1
+卡萨布兰卡|Casablanca|摩洛哥|Africa/Casablanca|
+拉巴特|Rabat|摩洛哥|Africa/Casablanca|1
+阿尔及尔|Algiers|阿尔及利亚|Africa/Algiers|1
+突尼斯|Tunis|突尼斯|Africa/Tunis|1
+的黎波里|Tripoli|利比亚|Africa/Tripoli|1
+约翰内斯堡|Johannesburg|南非|Africa/Johannesburg|
+开普敦|Cape Town|南非|Africa/Johannesburg|
+比勒陀利亚|Pretoria|南非|Africa/Johannesburg|1
+内罗毕|Nairobi|肯尼亚|Africa/Nairobi|1
+达累斯萨拉姆|Dar es Salaam|坦桑尼亚|Africa/Dar_es_Salaam|
+拉各斯|Lagos|尼日利亚|Africa/Lagos|
+阿布贾|Abuja|尼日利亚|Africa/Lagos|1
+阿克拉|Accra|加纳|Africa/Accra|1
+亚的斯亚贝巴|Addis Ababa|埃塞俄比亚|Africa/Addis_Ababa|1
+金沙萨|Kinshasa|刚果（金）|Africa/Kinshasa|1
+罗安达|Luanda|安哥拉|Africa/Luanda|1
+哈拉雷|Harare|津巴布韦|Africa/Harare|1
+卢萨卡|Lusaka|赞比亚|Africa/Lusaka|1
+路易港|Port Louis|毛里求斯|Indian/Mauritius|1
+维多利亚|Victoria|塞舌尔|Indian/Mahe|1
+纽约|New York|美国|America/New_York|
+华盛顿|Washington|美国|America/New_York|1
+波士顿|Boston|美国|America/New_York|
+迈阿密|Miami|美国|America/New_York|
+亚特兰大|Atlanta|美国|America/New_York|
+芝加哥|Chicago|美国|America/Chicago|
+休斯敦|Houston|美国|America/Chicago|
+达拉斯|Dallas|美国|America/Chicago|
+丹佛|Denver|美国|America/Denver|
+凤凰城|Phoenix|美国|America/Phoenix|
+盐湖城|Salt Lake City|美国|America/Denver|
+洛杉矶|Los Angeles|美国|America/Los_Angeles|
+旧金山|San Francisco|美国|America/Los_Angeles|
+西雅图|Seattle|美国|America/Los_Angeles|
+拉斯维加斯|Las Vegas|美国|America/Los_Angeles|
+檀香山|Honolulu|美国|Pacific/Honolulu|
+安克雷奇|Anchorage|美国|America/Anchorage|
+多伦多|Toronto|加拿大|America/Toronto|
+渥太华|Ottawa|加拿大|America/Toronto|1
+蒙特利尔|Montreal|加拿大|America/Toronto|
+温哥华|Vancouver|加拿大|America/Vancouver|
+卡尔加里|Calgary|加拿大|America/Edmonton|
+墨西哥城|Mexico City|墨西哥|America/Mexico_City|1
+坎昆|Cancun|墨西哥|America/Cancun|
+巴拿马城|Panama City|巴拿马|America/Panama|1
+危地马拉城|Guatemala City|危地马拉|America/Guatemala|1
+哈瓦那|Havana|古巴|America/Havana|1
+圣何塞|San José|哥斯达黎加|America/Costa_Rica|1
+圣萨尔瓦多|San Salvador|萨尔瓦多|America/El_Salvador|1
+特古西加尔巴|Tegucigalpa|洪都拉斯|America/Tegucigalpa|1
+马那瓜|Managua|尼加拉瓜|America/Managua|1
+圣多明各|Santo Domingo|多米尼加|America/Santo_Domingo|1
+金斯敦|Kingston|牙买加|America/Jamaica|1
+拿骚|Nassau|巴哈马|America/Nassau|1
+圣胡安|San Juan|波多黎各|America/Puerto_Rico|1
+西班牙港|Port of Spain|特立尼达和多巴哥|America/Port_of_Spain|1
+帕拉马里博|Paramaribo|苏里南|America/Paramaribo|1
+乔治敦|Georgetown|圭亚那|America/Guyana|1
+波哥大|Bogotá|哥伦比亚|America/Bogota|1
+基多|Quito|厄瓜多尔|America/Guayaquil|1
+利马|Lima|秘鲁|America/Lima|1
+拉巴斯|La Paz|玻利维亚|America/La_Paz|1
+圣地亚哥|Santiago|智利|America/Santiago|1
+布宜诺斯艾利斯|Buenos Aires|阿根廷|America/Argentina/Buenos_Aires|1
+蒙得维的亚|Montevideo|乌拉圭|America/Montevideo|1
+亚松森|Asunción|巴拉圭|America/Asuncion|1
+圣保罗|São Paulo|巴西|America/Sao_Paulo|
+里约热内卢|Rio de Janeiro|巴西|America/Sao_Paulo|
+巴西利亚|Brasília|巴西|America/Sao_Paulo|1
+加拉加斯|Caracas|委内瑞拉|America/Caracas|1
+悉尼|Sydney|澳大利亚|Australia/Sydney|
+堪培拉|Canberra|澳大利亚|Australia/Sydney|1
+墨尔本|Melbourne|澳大利亚|Australia/Melbourne|
+布里斯班|Brisbane|澳大利亚|Australia/Brisbane|
+珀斯|Perth|澳大利亚|Australia/Perth|
+阿德莱德|Adelaide|澳大利亚|Australia/Adelaide|
+达尔文|Darwin|澳大利亚|Australia/Darwin|
+奥克兰|Auckland|新西兰|Pacific/Auckland|
+惠灵顿|Wellington|新西兰|Pacific/Auckland|1
+苏瓦|Suva|斐济|Pacific/Fiji|1
+努库阿洛法|Nuku'alofa|汤加|Pacific/Tongatapu|1
+阿皮亚|Apia|萨摩亚|Pacific/Apia|1
+塔拉瓦|Tarawa|基里巴斯|Pacific/Tarawa|1
+莫尔兹比港|Port Moresby|巴布亚新几内亚|Pacific/Port_Moresby|1
+关岛|Guam|美国关岛|Pacific/Guam|
+塞班|Saipan|北马里亚纳|Pacific/Saipan|
+帕劳|Palau|帕劳|Pacific/Palau|1
+马朱罗|Majuro|马绍尔群岛|Pacific/Majuro|1
+努美阿|Noumea|新喀里多尼亚|Pacific/Noumea|1
+帕皮提|Papeete|法属波利尼西亚|Pacific/Tahiti|
+`;
+
+const DB = RAW_CITY.trim().split(/\n/).map(l => l.trim()).filter(Boolean).map(line => {
+  const [zh, en, country, tz, cap] = line.split('|');
+  return { zh, en, country, tz, capital: cap === '1', key: tz + '|' + zh };
+});
+
+/* =========================================================
+   2. 时区计算工具
+   ========================================================= */
+const LS_KEY = 'timezone-board-v1';
+const WEEK_ZH = { Sun:'周日', Mon:'周一', Tue:'周二', Wed:'周三', Thu:'周四', Fri:'周五', Sat:'周六' };
+const localTZ = (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'Asia/Shanghai';
+
+const fmtCache = new Map();
+function fmtFor(tz){
+  let f = fmtCache.get(tz);
+  if (!f){
+    f = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, hourCycle: 'h23',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', weekday: 'short'
+    });
+    fmtCache.set(tz, f);
+  }
+  return f;
+}
+function isValidTZ(tz){
+  if (!tz) return false;
+  try { fmtFor(tz); return true; } catch(e){ return false; }
+}
+function partsIn(tz, date){
+  const p = {};
+  for (const x of fmtFor(tz).formatToParts(date)) if (x.type !== 'literal') p[x.type] = x.value;
+  return p;
+}
+// 某时区在给定时刻的 UTC 偏移（分钟，按秒级精确计算）
+function offsetMin(tz, date){
+  const p = partsIn(tz, date);
+  const localSec = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second) / 1000;
+  const utcSec = Math.floor(date.getTime() / 1000);
+  return Math.round((localSec - utcSec) / 60);
+}
+function dayNumber(tz, date){
+  const p = partsIn(tz, date);
+  return Date.UTC(+p.year, +p.month - 1, +p.day) / 86400000;
+}
+function dayOfParts(p){ return Date.UTC(+p.year, +p.month - 1, +p.day) / 86400000; }
+
+function offsetLabel(min){
+  const sign = min < 0 ? '-' : '+';
+  const a = Math.abs(min);
+  const h = String(Math.floor(a / 60)).padStart(2, '0');
+  const m = String(a % 60).padStart(2, '0');
+  return 'UTC' + sign + h + ':' + m;
+}
+function durText(min){
+  const h = Math.floor(min / 60), m = min % 60;
+  if (!h) return m + ' 分钟';
+  if (!m) return h + ' 小时';
+  return h + ' 小时 ' + m + ' 分';
+}
+function diffLabel(diff){
+  if (diff === 0) return '同时区';
+  return diff > 0 ? '快 ' + durText(diff) : '慢 ' + durText(-diff);
+}
+function dateLabel(p, localDay){
+  const delta = Math.round(dayOfParts(p) - localDay);
+  const rel = delta === 0 ? '今天'
+    : delta === 1 ? '明天'
+    : delta === -1 ? '昨天'
+    : (delta > 0 ? '+' + delta + ' 天' : delta + ' 天');
+  return (+p.month) + '月' + (+p.day) + '日 ' + (WEEK_ZH[p.weekday] || '') + ' · ' + rel;
+}
+function timeParts(p){
+  let h = +p.hour, hh = h, ampm = '';
+  if (state.hour12){ ampm = h < 12 ? 'AM' : 'PM'; hh = h % 12 || 12; }
+  return {
+    hm: String(hh).padStart(2, '0') + ':' + p.minute,
+    sec: state.showSec ? ':' + p.second : '',
+    ampm: ampm
+  };
+}
+const norm = s => String(s || '').toLowerCase().replace(/[\s_'-]/g, '');
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+  ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+
+/* =========================================================
+   3. 状态
+   ========================================================= */
+const state = { cities: [], hour12: false, showSec: false, theme: 'dark', desc: false, seq: 1 };
+let nodes = {};          // id -> 卡片内节点
+let lastOffsets = {};    // id -> 上次偏移，用于检测夏令时/排序变化
+const DEFAULT_HINT = '按 UTC 偏移自动竖排 · 列表保存在本机浏览器';
+
+const board = document.getElementById('board');
+const hintEl = document.getElementById('hint');
+const countEl = document.getElementById('count');
+const heroClock = document.getElementById('heroClock');
+const heroSub = document.getElementById('heroSub');
+const input = document.getElementById('q');
+const addBtn = document.getElementById('addBtn');
+const suggestBox = document.getElementById('suggest');
+const btnHour = document.getElementById('btnHour');
+const btnSec = document.getElementById('btnSec');
+const btnTheme = document.getElementById('btnTheme');
+const btnOrder = document.getElementById('btnOrder');
+let suggestList = [];
+let hintTimer = null;
+
+/* =========================================================
+   4. 存取
+   ========================================================= */
+function save(){
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      cities: state.cities.map(c => ({ id:c.id, zh:c.zh, en:c.en, country:c.country, tz:c.tz, capital:!!c.capital, key:c.key })),
+      hour12: state.hour12, showSec: state.showSec, theme: state.theme, desc: state.desc, seq: state.seq
+    }));
+  } catch(e){}
+}
+function load(){
+  try {
+    const raw = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+    if (raw && Array.isArray(raw.cities) && raw.cities.length){
+      state.cities = raw.cities.filter(c => c && c.tz && isValidTZ(c.tz)).map((c, i) => ({
+        id: i + 1, zh: c.zh || c.tz, en: c.en || '', country: c.country || '',
+        tz: c.tz, capital: !!c.capital, key: c.key || (c.tz + '|' + (c.zh || c.tz))
+      }));
+      state.seq = state.cities.length + 1;
+      state.hour12 = !!raw.hour12;
+      state.showSec = !!raw.showSec;
+      state.theme = raw.theme === 'light' ? 'light' : 'dark';
+      state.desc = !!raw.desc;
+      return true;
+    }
+  } catch(e){}
+  return false;
+}
+function pushCity(item){
+  const city = {
+    id: state.seq++, zh: item.zh, en: item.en || '', country: item.country || '',
+    tz: item.tz, capital: !!item.capital, key: item.key || (item.tz + '|' + item.zh)
+  };
+  state.cities.push(city);
+  return city;
+}
+
+/* =========================================================
+   5. 搜索与添加
+   ========================================================= */
+let IANA_LIST = [];
+try { IANA_LIST = (Intl.supportedValuesOf ? Intl.supportedValuesOf('timeZone') : []) || []; } catch(e){ IANA_LIST = []; }
+
+function cityLabelFromTZ(tz){
+  const seg = tz.split('/').pop().replace(/_/g, ' ');
+  return seg;
+}
+function rank(c, n){
+  const zh = norm(c.zh), en = norm(c.en), co = norm(c.country);
+  if (zh === n || en === n) return 0;
+  if (zh.startsWith(n) || en.startsWith(n)) return 1;
+  if (co.startsWith(n)) return 2;
+  if (zh.includes(n) || en.includes(n)) return 3;
+  if (co.includes(n) || norm(c.tz).includes(n)) return 4;
+  return 99;
+}
+function suggestions(text){
+  const q = String(text || '').trim();
+  if (!q) return [];
+  const n = norm(q);
+  const scored = [];
+  for (const c of DB){
+    const r = rank(c, n);
+    if (r < 99) scored.push({ c, r });
+  }
+  scored.sort((a, b) => a.r - b.r);
+  const out = scored.slice(0, 10).map(x => x.c);
+  const seenTZ = new Set(out.map(c => c.tz));
+  for (const tz of IANA_LIST){
+    if (out.length >= 10) break;
+    if (seenTZ.has(tz)) continue;
+    if (norm(tz).includes(n)){
+      out.push({ zh: cityLabelFromTZ(tz), en: cityLabelFromTZ(tz), country: 'IANA 时区', tz, capital: false, key: tz + '|' + tz, iana: true });
+      seenTZ.add(tz);
+    }
+  }
+  return out;
+}
+function addCity(item, silent){
+  if (!item) return;
+  if (state.cities.some(c => c.key === item.key)){ setHint('已在列表中：' + item.zh); return; }
+  pushCity(item);
+  save(); render();
+  if (!silent) setHint('已添加 ' + item.zh + ' · ' + offsetLabel(offsetMin(item.tz, new Date())));
+}
+function removeCity(id){
+  const idx = state.cities.findIndex(c => c.id === id);
+  if (idx < 0) return;
+  const name = state.cities[idx].zh;
+  state.cities.splice(idx, 1);
+  save(); render();
+  setHint('已移除 ' + name);
+}
+function commit(text){
+  const q = String(text || '').trim();
+  if (!q){ setHint('先输入城市、国家或时区名'); input.focus(); return; }
+  const list = suggestions(q);
+  if (list.length){
+    addCity(list[0]);
+    input.value = '';
+    suggestBox.hidden = true;
+    return;
+  }
+  // 兜底：直接当 IANA 时区解析
+  if (isValidTZ(q)){
+    addCity({ zh: cityLabelFromTZ(q), en: cityLabelFromTZ(q), country: 'IANA 时区', tz: q, capital: false, key: q + '|' + q, iana: true });
+    input.value = '';
+    suggestBox.hidden = true;
+    return;
+  }
+  setHint('没找到「' + q + '」，换个城市名或输入 区域/城市 形式的时区（如 Asia/Tokyo）');
+}
+function renderSuggest(text){
+  const list = suggestions(text);
+  suggestList = list;
+  if (!list.length){ suggestBox.hidden = true; suggestBox.innerHTML = ''; return; }
+  const now = new Date();
+  suggestBox.innerHTML = list.map((c, i) => {
+    const off = offsetMin(c.tz, now);
+    const meta = (c.country && c.country !== 'IANA 时区') ? (c.country + ' · ' + c.tz) : c.tz;
+    return '<button class="sug" type="button" data-i="' + i + '">' +
+        '<span class="s-name">' + esc(c.zh) + (c.capital ? ' ★' : '') + '</span>' +
+        '<span class="s-meta">' + esc(meta) + '</span>' +
+        '<span class="s-off">' + offsetLabel(off) + '</span>' +
+      '</button>';
+  }).join('');
+  suggestBox.hidden = false;
+}
+function setHint(msg){
+  hintEl.textContent = msg;
+  hintEl.classList.add('flash');
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => {
+    hintEl.textContent = DEFAULT_HINT;
+    hintEl.classList.remove('flash');
+  }, 3200);
+}
+
+/* =========================================================
+   6. 渲染
+   ========================================================= */
+function timeIsURL(c){
+  const name = (c.en || c.zh || '').replace(/ /g, '_');
+  return 'https://time.is/' + encodeURIComponent(name);
+}
+function cardHTML(c, off, localOff, localDay, now){
+  const p = partsIn(c.tz, now);
+  const t = timeParts(p);
+  const isLocal = c.tz === localTZ;
+  return '<article class="card' + (isLocal ? ' local' : '') + '" data-id="' + c.id + '">' +
+      '<div class="info">' +
+        '<div class="city-line">' +
+          '<span class="city-name">' + esc(c.zh) + '</span>' +
+          (c.capital ? '<span class="badge cap">首都</span>' : '') +
+          (c.country ? '<span class="badge">' + esc(c.country) + '</span>' : '') +
+          (isLocal ? '<span class="badge me">本机</span>' : '') +
+        '</div>' +
+        '<div class="date-line">' +
+          '<span data-f="date">' + dateLabel(p, localDay) + '</span>' +
+          '<span class="diff" data-f="diff">' + diffLabel(off - localOff) + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="time">' +
+        '<span data-f="hm">' + t.hm + '</span>' +
+        '<span class="sec" data-f="sec">' + t.sec + '</span>' +
+        '<span class="ampm" data-f="ampm">' + t.ampm + '</span>' +
+      '</div>' +
+      '<div class="rowend">' +
+        '<a class="ts" href="' + timeIsURL(c) + '" target="_blank" rel="noopener noreferrer">time.is ↗</a>' +
+        '<button class="del" type="button" data-del="' + c.id + '" title="移除这个地区" aria-label="移除">×</button>' +
+      '</div>' +
+    '</article>';
+}
+
+function render(){
+  const now = new Date();
+  const localOff = offsetMin(localTZ, now);
+  const localDay = dayNumber(localTZ, now);
+  nodes = {};
+  lastOffsets = {};
+
+  if (!state.cities.length){
+    board.innerHTML = '<div class="empty">还没有地区。在上面输入一个城市，回车即可加进这条时区轴。</div>';
+    countEl.textContent = '0';
+    return;
+  }
+
+  const items = state.cities.map((c, idx) => ({ c, idx, off: offsetMin(c.tz, now) }));
+  items.sort((a, b) => state.desc ? (b.off - a.off || a.idx - b.idx) : (a.off - b.off || a.idx - b.idx));
+
+  const groups = [];
+  for (const it of items){
+    const g = groups[groups.length - 1];
+    if (g && g.off === it.off) g.items.push(it);
+    else groups.push({ off: it.off, items: [it] });
+  }
+
+  let html = '';
+  for (const g of groups){
+    html += '<section class="grp">' +
+      '<div class="grp-head">' +
+        '<span class="utc">' + offsetLabel(g.off) + '</span>' +
+        '<span class="cnt">' + g.items.length + ' 个地区</span>' +
+        '<span class="rule"></span>' +
+      '</div><div class="cards">';
+    for (const it of g.items){
+      html += cardHTML(it.c, it.off, localOff, localDay, now);
+      lastOffsets[it.c.id] = it.off;
+    }
+    html += '</div></section>';
+  }
+  board.innerHTML = html;
+  countEl.textContent = String(state.cities.length);
+
+  for (const c of state.cities){
+    const el = board.querySelector('[data-id="' + c.id + '"]');
+    if (!el) continue;
+    nodes[c.id] = {
+      el,
+      hm: el.querySelector('[data-f="hm"]'),
+      sec: el.querySelector('[data-f="sec"]'),
+      ampm: el.querySelector('[data-f="ampm"]'),
+      diff: el.querySelector('[data-f="diff"]'),
+      date: el.querySelector('[data-f="date"]')
+    };
+  }
+}
+
+/* =========================================================
+   7. 每秒刷新
+   ========================================================= */
+function heroUpdate(now){
+  const lp = partsIn(localTZ, now);
+  const t = timeParts(lp);
+  heroClock.textContent = t.hm + t.sec + (t.ampm ? ' ' + t.ampm : '');
+  heroSub.textContent = (+lp.month) + '月' + (+lp.day) + '日 ' + (WEEK_ZH[lp.weekday] || '') +
+    ' · ' + offsetLabel(offsetMin(localTZ, now)) + ' · ' + localTZ;
+}
+function tick(){
+  const now = new Date();
+  heroUpdate(now);
+  const localOff = offsetMin(localTZ, now);
+  const localDay = dayNumber(localTZ, now);
+  let dirty = false;
+
+  for (const c of state.cities){
+    const off = offsetMin(c.tz, now);
+    if (lastOffsets[c.id] !== off){ dirty = true; lastOffsets[c.id] = off; }
+    const n = nodes[c.id];
+    if (!n) continue;
+    const p = partsIn(c.tz, now);
+    const t = timeParts(p);
+    n.hm.textContent = t.hm;
+    n.sec.textContent = t.sec;
+    n.ampm.textContent = t.ampm;
+    n.diff.textContent = diffLabel(off - localOff);
+    n.date.textContent = dateLabel(p, localDay);
+  }
+  if (dirty) render();   // 偏移变了（夏令时切换）→ 重新排序分组
+}
+function loop(){
+  tick();
+  const ms = 1000 - new Date().getMilliseconds();
+  setTimeout(loop, ms > 0 ? ms : 1000);
+}
+
+/* =========================================================
+   8. 控件
+   ========================================================= */
+function syncToggles(){
+  btnOrder.textContent = state.desc ? 'UTC ↓' : 'UTC ↑';
+  btnOrder.setAttribute('aria-pressed', state.desc ? 'true' : 'false');
+  btnHour.textContent = state.hour12 ? '12 小时' : '24 小时';
+  btnHour.setAttribute('aria-pressed', state.hour12 ? 'true' : 'false');
+  btnSec.setAttribute('aria-pressed', state.showSec ? 'true' : 'false');
+  btnTheme.textContent = state.theme === 'dark' ? '深色' : '浅色';
+  btnTheme.setAttribute('aria-pressed', state.theme === 'dark' ? 'true' : 'false');
+  document.documentElement.dataset.theme = state.theme;
+}
+
+input.addEventListener('input', () => renderSuggest(input.value));
+input.addEventListener('focus', () => { if (input.value.trim()) renderSuggest(input.value); });
+input.addEventListener('blur', () => setTimeout(() => { suggestBox.hidden = true; }, 120));
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); commit(input.value); }
+  else if (e.key === 'Escape'){ suggestBox.hidden = true; }
+});
+addBtn.addEventListener('click', () => commit(input.value));
+
+suggestBox.addEventListener('mousedown', e => {
+  const b = e.target.closest('.sug');
+  if (!b) return;
+  e.preventDefault();
+  const item = suggestList[+b.dataset.i];
+  addCity(item);
+  input.value = '';
+  input.focus();
+  suggestBox.hidden = true;
+});
+
+board.addEventListener('click', e => {
+  const b = e.target.closest('[data-del]');
+  if (!b) return;
+  removeCity(+b.dataset.del);
+});
+
+btnHour.addEventListener('click', () => { state.hour12 = !state.hour12; save(); syncToggles(); render(); });
+btnSec.addEventListener('click', () => { state.showSec = !state.showSec; save(); syncToggles(); render(); });
+btnOrder.addEventListener('click', () => { state.desc = !state.desc; save(); syncToggles(); render(); });
+btnTheme.addEventListener('click', () => {
+  state.theme = state.theme === 'dark' ? 'light' : 'dark';
+  save(); syncToggles();
+});
+
+/* =========================================================
+   9. 启动
+   ========================================================= */
+(function init(){
+  const restored = load();
+  if (!restored){
+    ['Asia/Shanghai|深圳', 'Europe/London|伦敦', 'Asia/Dubai|迪拜', 'America/New_York|纽约', 'America/Sao_Paulo|圣保罗', 'Australia/Sydney|悉尼']
+      .forEach(k => { const c = DB.find(x => x.key === k); if (c) pushCity(c); });
+    save();
+  }
+  document.getElementById('localTzName').textContent = localTZ;
+  syncToggles();
+  render();
+  loop();
+})();
+</script>
+</body>
+</html>
