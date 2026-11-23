@@ -1,247 +1,184 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>世界时区竖排看板</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>世界时区看板</title>
 <style>
-/* ===== 主题变量 ===== */
-:root{
-  --bg:#0a0d13;
-  --glow1:rgba(92,200,255,.14);
-  --glow2:rgba(255,207,92,.08);
-  --text:#e9eff8;
-  --dim:#8695ab;
-  --card:rgba(255,255,255,.045);
-  --card-hi:rgba(255,255,255,.09);
-  --line:rgba(255,255,255,.10);
-  --accent:#5cc8ff;
-  --accent-soft:rgba(92,200,255,.10);
-  --accent-line:rgba(92,200,255,.28);
-  --warn:#ffcf5c;
-  --danger:#ff8080;
-}
-[data-theme="light"]{
-  --bg:#f2f6fb;
-  --glow1:rgba(30,140,220,.10);
-  --glow2:rgba(220,170,40,.08);
-  --text:#0e1726;
-  --dim:#5b6b80;
-  --card:rgba(255,255,255,.72);
-  --card-hi:rgba(255,255,255,.95);
-  --line:rgba(14,23,38,.10);
-  --accent:#0d76c0;
-  --accent-soft:rgba(13,118,192,.08);
-  --accent-line:rgba(13,118,192,.24);
-  --warn:#a8720b;
-  --danger:#c33;
-}
-
+/* ===== 基础 ===== */
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
-  margin:0;
-  min-height:100vh;
+  margin:0;padding:10px;
   background:
-    radial-gradient(1100px 560px at 18% -8%, var(--glow1), transparent 62%),
-    radial-gradient(880px 480px at 102% -2%, var(--glow2), transparent 60%),
-    var(--bg);
-  color:var(--text);
+    radial-gradient(760px 360px at 12% -12%, rgba(120,170,255,.13), transparent 62%),
+    radial-gradient(680px 320px at 96% -6%, rgba(255,190,110,.07), transparent 62%),
+    #070a10;
+  color:#e9eff8;
   font-family:"Inter","Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
   -webkit-font-smoothing:antialiased;
-  display:flex;
-  justify-content:center;
-  padding:clamp(14px,3vw,40px);
+  display:flex;justify-content:center;
 }
+.app{width:100%;max-width:1000px}
 
-.app{width:100%;max-width:760px;display:flex;flex-direction:column;min-height:100%}
-
-/* ===== 顶部 ===== */
-.hero{
-  display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;
-  padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:16px;
+/* ===== 顶部一行 ===== */
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 2px 8px;min-width:0}
+.now{display:flex;align-items:baseline;gap:7px;flex:1 1 auto;min-width:0;overflow:hidden}
+.now b{
+  font-size:26px;font-weight:700;line-height:1;
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;white-space:nowrap;
 }
-.hero-local .lbl{
-  font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:4px;
+.now span{
+  flex:0 1 auto;min-width:0;
+  font-size:11px;color:#8ea0b6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-.hero-local .big{
-  font-size:clamp(30px,7vw,44px);font-weight:700;line-height:1.04;
-  font-variant-numeric:tabular-nums;font-feature-settings:"tnum";letter-spacing:-.02em;
+.tools{display:flex;gap:5px;flex:0 0 auto}
+.tools button{
+  font:inherit;font-size:11px;cursor:pointer;white-space:nowrap;
+  padding:5px 9px;border-radius:8px;
+  border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#9fb0c5;
+  transition:.15s;
 }
-.hero-local .sub{font-size:12.5px;color:var(--dim);margin-top:5px}
-
-.toggles{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding-bottom:2px}
-.chip{
-  appearance:none;-webkit-appearance:none;font:inherit;font-size:12px;cursor:pointer;
-  padding:7px 12px;border-radius:999px;
-  border:1px solid var(--line);background:var(--card);color:var(--dim);
-  transition:.18s ease;
-}
-.chip:hover{color:var(--text);border-color:var(--accent-line)}
-.chip[aria-pressed="true"]{color:var(--text);border-color:var(--accent-line);background:var(--accent-soft)}
+.tools button:hover{color:#e9eff8;border-color:rgba(120,180,255,.4)}
+.tools button[aria-pressed="true"]{color:#eaf3ff;border-color:rgba(120,180,255,.5);background:rgba(90,150,255,.18)}
 
 /* ===== 添加栏 ===== */
-.adder{position:relative;display:flex;gap:10px}
-#q{
-  flex:1;min-width:0;font:inherit;font-size:14.5px;
-  padding:13px 16px;border-radius:13px;
-  border:1px solid var(--line);background:var(--card);color:var(--text);
-  outline:none;transition:.18s;
+.addbar{position:relative;display:flex;gap:7px;margin-bottom:8px}
+.addbar input{
+  flex:1;min-width:0;font:inherit;font-size:12.5px;
+  padding:9px 12px;border-radius:10px;
+  border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:inherit;
+  outline:none;transition:.15s;
 }
-#q::placeholder{color:var(--dim)}
-#q:focus{border-color:var(--accent-line);background:var(--card-hi);box-shadow:0 0 0 3px var(--accent-soft)}
-.add{
-  font:inherit;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;
-  padding:13px 20px;border-radius:13px;border:1px solid var(--accent-line);
-  background:linear-gradient(180deg,rgba(92,200,255,.22),rgba(92,200,255,.10));
-  color:var(--text);transition:.18s;
+.addbar input::placeholder{color:#6e7f94}
+.addbar input:focus{border-color:rgba(120,180,255,.5);box-shadow:0 0 0 3px rgba(90,150,255,.12)}
+.addbar button{
+  flex:0 0 auto;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
+  padding:9px 15px;border-radius:10px;
+  border:1px solid rgba(120,180,255,.38);background:rgba(90,150,255,.17);color:#eaf3ff;
 }
-[data-theme="light"] .add{background:linear-gradient(180deg,rgba(13,118,192,.16),rgba(13,118,192,.08))}
-.add:hover{filter:brightness(1.15)}
-.add:active{transform:translateY(1px)}
+.addbar button:hover{filter:brightness(1.15)}
 
 .suggest{
-  position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:30;
-  background:var(--bg);border:1px solid var(--line);border-radius:13px;
-  box-shadow:0 18px 44px rgba(0,0,0,.42);overflow:hidden;max-height:320px;overflow-y:auto;
+  position:absolute;left:0;right:60px;top:calc(100% + 5px);z-index:40;
+  background:#0d131c;border:1px solid rgba(255,255,255,.12);border-radius:10px;
+  box-shadow:0 16px 34px rgba(0,0,0,.55);max-height:250px;overflow-y:auto;
 }
-[data-theme="light"] .suggest{background:#fff;box-shadow:0 18px 40px rgba(20,40,70,.22)}
 .sug{
-  display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;
-  font:inherit;padding:10px 14px;background:transparent;border:0;border-bottom:1px solid var(--line);
-  color:var(--text);
+  display:flex;align-items:center;gap:8px;width:100%;text-align:left;cursor:pointer;
+  font:inherit;font-size:12.5px;padding:8px 11px;
+  background:transparent;border:0;border-bottom:1px solid rgba(255,255,255,.07);color:inherit;
 }
 .sug:last-child{border-bottom:0}
-.sug:hover,.sug:focus-visible{background:var(--card-hi);outline:none}
-.s-name{font-size:14px;font-weight:600}
-.s-meta{font-size:11.5px;color:var(--dim);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.s-off{font-size:11.5px;color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap}
+.sug:hover,.sug:focus-visible{background:rgba(255,255,255,.07);outline:none}
+.sug .n{font-weight:600;white-space:nowrap}
+.sug .m{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8294aa;font-size:11px}
+.sug .o{color:#7fb0ff;font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}
 
-.hint{
-  font-size:12px;color:var(--dim);padding:10px 4px 4px;min-height:20px;transition:color .2s;
-}
-.hint.flash{color:var(--accent)}
+/* ===== 白天 / 夜间 分区 ===== */
+.zone{border-radius:12px;padding:7px 7px 8px;margin-bottom:8px;border:1px solid}
+.zone.day{background:linear-gradient(180deg,rgba(255,197,110,.10),rgba(255,197,110,.025));border-color:rgba(255,197,110,.26)}
+.zone.night{background:linear-gradient(180deg,rgba(80,132,255,.11),rgba(80,132,255,.025));border-color:rgba(80,132,255,.24)}
+.zone-head{display:flex;align-items:center;gap:6px;padding:1px 3px 7px;font-size:11.5px;color:#93a5ba}
+.zone-head .name{font-size:12px;font-weight:700;letter-spacing:.02em}
+.zone.day .zone-head .name{color:#f3bd5e}
+.zone.night .zone-head .name{color:#9dbcff}
+.zone-head .hours{opacity:.62;font-variant-numeric:tabular-nums}
+.zone-head .count{margin-left:auto;opacity:.55;font-variant-numeric:tabular-nums}
 
-/* ===== 列表 ===== */
-.board{flex:1;padding-bottom:8px}
-.empty{
-  border:1px dashed var(--line);border-radius:16px;padding:36px 20px;text-align:center;
-  color:var(--dim);font-size:13.5px;
-}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:6px}
 
-.grp{margin-bottom:6px}
-.grp-head{display:flex;align-items:center;gap:10px;padding:12px 2px 9px}
-.grp-head .utc{
-  font-size:11.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);
-  font-variant-numeric:tabular-nums;
-  padding:3px 9px;border-radius:999px;background:var(--accent-soft);border:1px solid var(--accent-line);
-}
-.grp-head .cnt{font-size:11.5px;color:var(--dim);white-space:nowrap}
-.grp-head .rule{flex:1;height:1px;background:var(--line)}
-
-.cards{display:flex;flex-direction:column;gap:8px}
-
+/* ===== 卡片：国家在前，与城市同字号 ===== */
 .card{
-  display:grid;grid-template-columns:minmax(0,1fr) auto auto;
-  align-items:center;gap:6px 14px;
-  padding:13px 14px;border-radius:15px;
-  background:var(--card);border:1px solid var(--line);
-  transition:.18s ease;
+  position:relative;min-width:0;
+  padding:6px 9px 5px;border-radius:9px;
+  background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.08);
+  transition:.15s;
 }
-.card:hover{background:var(--card-hi);border-color:var(--accent-line)}
-.card.local{border-color:rgba(255,207,92,.38);background:rgba(255,207,92,.07)}
-[data-theme="light"] .card.local{background:rgba(200,150,20,.10)}
+.zone.night .card{background:rgba(14,22,40,.55);border-color:rgba(120,160,255,.14)}
+.zone.day .card{background:rgba(255,255,255,.07);border-color:rgba(255,210,150,.15)}
+.card:hover{background:rgba(255,255,255,.10)}
+.card.me{border-color:rgba(255,207,92,.5);background:rgba(255,207,92,.11)}
 
-.info{min-width:0}
-.city-line{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
-.city-name{font-size:16px;font-weight:650;letter-spacing:-.01em}
-.badge{
-  font-size:10.5px;line-height:1.5;padding:1px 6px;border-radius:5px;
-  background:rgba(128,160,200,.14);color:var(--dim);white-space:nowrap;
-}
-.badge.cap{color:var(--warn);background:rgba(255,207,92,.14)}
-.badge.me{color:var(--accent);background:var(--accent-soft)}
+.place{display:flex;align-items:baseline;gap:5px;font-size:13.5px;line-height:1.3;white-space:nowrap;overflow:hidden;padding-right:14px}
+.place .country{color:#93a6bd;font-weight:600;flex:0 0 auto}
+.place .city{color:#f1f6fd;font-weight:650;overflow:hidden;text-overflow:ellipsis}
 
-.date-line{margin-top:5px;font-size:12px;color:var(--dim);display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
-.date-line .diff{color:var(--accent);font-variant-numeric:tabular-nums}
-
+.row{display:flex;align-items:flex-end;justify-content:space-between;gap:4px;margin-top:1px}
 .time{
-  font-size:clamp(21px,5vw,29px);font-weight:680;letter-spacing:-.02em;
+  font-size:20px;font-weight:700;line-height:1.15;letter-spacing:-.02em;
   font-variant-numeric:tabular-nums;font-feature-settings:"tnum";white-space:nowrap;
 }
-.time .sec{font-size:.6em;font-weight:500;color:var(--dim)}
-.time .ampm{font-size:.45em;font-weight:600;color:var(--dim);margin-left:3px;letter-spacing:.04em}
+.time .sec{font-size:.56em;font-weight:500;color:#8b9eb5}
+.time .ampm{font-size:.44em;font-weight:600;color:#8b9eb5;margin-left:2px;letter-spacing:.03em}
+.date{font-size:10px;color:#77899e;white-space:nowrap;font-variant-numeric:tabular-nums;padding-bottom:2px}
+.date.shift{color:#ffce6b;font-weight:600}
 
-.rowend{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
-.ts{
-  font-size:10.5px;color:var(--dim);text-decoration:none;white-space:nowrap;
-  border-bottom:1px dotted transparent;padding-bottom:1px;
+.x{
+  position:absolute;top:1px;right:1px;width:16px;height:16px;padding:0;
+  line-height:14px;font-size:12px;cursor:pointer;
+  border:1px solid transparent;border-radius:5px;background:transparent;color:#93a5ba;
+  opacity:.32;transition:.15s;
 }
-.ts:hover{color:var(--accent);border-bottom-color:var(--accent)}
-.del{
-  width:20px;height:20px;padding:0;line-height:18px;font-size:15px;cursor:pointer;
-  border-radius:6px;border:1px solid transparent;background:transparent;color:var(--dim);
-  opacity:.5;transition:.15s;
-}
-.del:hover{opacity:1;color:var(--danger);border-color:rgba(255,128,128,.42);background:rgba(255,128,128,.10)}
+.x:hover{opacity:1;color:#ff8d8d;border-color:rgba(255,122,122,.45);background:rgba(255,122,122,.1)}
 
-/* ===== 页脚 ===== */
-.foot{
-  margin-top:22px;padding-top:14px;border-top:1px solid var(--line);
-  font-size:11.5px;line-height:1.75;color:var(--dim);
+.empty{
+  border:1px dashed rgba(255,255,255,.14);border-radius:12px;padding:24px 16px;
+  text-align:center;color:#8294aa;font-size:12.5px;line-height:1.7;
 }
-.foot p{margin:0 0 4px}
-.foot b{color:var(--text);font-weight:600}
 
-@media (max-width:520px){
-  .card{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"info time" "rowend rowend";padding:12px}
-  .info{grid-area:info}
-  .time{grid-area:time}
-  .rowend{grid-area:rowend;flex-direction:row;justify-content:space-between;align-items:center;margin-top:2px}
-  .date-line{font-size:11.5px}
+/* ===== 提示 ===== */
+.toast{
+  position:fixed;left:50%;bottom:16px;transform:translate(-50%,10px);
+  padding:7px 14px;border-radius:999px;font-size:12px;
+  background:rgba(16,24,36,.92);border:1px solid rgba(120,180,255,.35);color:#dce9fa;
+  opacity:0;pointer-events:none;transition:.2s;z-index:50;white-space:nowrap;
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:420px){
+  body{padding:8px}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:5px}
+  .now b{font-size:23px}
+  .now span{font-size:10px}
+  .tools button{padding:4px 7px;font-size:10px}
+  .card{padding:6px 8px 5px}
+  .time{font-size:19px}
+  .place{font-size:13px}
+}
+@media (min-width:860px){
+  .grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
 <div class="app">
-
-  <header class="hero">
-    <div class="hero-local">
-      <div class="lbl">本机时间 · <span id="localTzName">--</span></div>
-      <div class="big" id="heroClock">--:--</div>
-      <div class="sub" id="heroSub"></div>
+  <div class="top">
+    <div class="now"><b id="nowTime">--:--</b><span id="nowMeta"></span></div>
+    <div class="tools">
+      <button id="btnHour" type="button">24 时制</button>
+      <button id="btnSec" type="button">秒</button>
+      <button id="btnOrder" type="button">UTC ↑</button>
     </div>
-    <div class="toggles">
-      <button class="chip" id="btnOrder" aria-pressed="false">UTC ↑</button>
-      <button class="chip" id="btnHour" aria-pressed="false">24 小时</button>
-      <button class="chip" id="btnSec" aria-pressed="false">显示秒</button>
-      <button class="chip" id="btnTheme" aria-pressed="true">深色</button>
-    </div>
-  </header>
+  </div>
 
-  <div class="adder">
+  <div class="addbar">
     <input id="q" type="text" autocomplete="off" spellcheck="false" enterkeyhint="done"
-           placeholder="输入城市 / 国家 / 时区，如 纽约、马尔代夫、Asia/Tokyo">
-    <button class="add" id="addBtn">添加</button>
+           placeholder="城市 / 国家 / 时区，如 纽约、马尔代夫、Asia/Tokyo">
+    <button id="addBtn" type="button">添加</button>
     <div class="suggest" id="suggest" hidden></div>
   </div>
-  <div class="hint" id="hint">按 UTC 偏移自动竖排 · 列表保存在本机浏览器</div>
 
-  <main class="board" id="board"></main>
-
-  <footer class="foot">
-    <p>时间由浏览器内置 IANA 时区数据库计算，含夏令时规则，<b>无需联网</b>；点每条右侧的 time.is ↗ 可到 time.is 对应页面核对。</p>
-    <p>共 <span id="count">0</span> 个地区 · 夏令时切换后排序与时差自动更新</p>
-  </footer>
-
+  <div id="board"></div>
+  <div class="toast" id="toast" aria-live="polite"></div>
 </div>
 
 <script>
 'use strict';
 
 /* =========================================================
-   1. 城市 / 首都 数据库（zh|en|国家|IANA 时区|是否首都）
+   1. 城市 / 首都 数据（zh|en|国家|IANA 时区|是否首都）
    ========================================================= */
 const RAW_CITY = `
 北京|Beijing|中国|Asia/Shanghai|1
@@ -483,11 +420,11 @@ const DB = RAW_CITY.trim().split(/\n/).map(l => l.trim()).filter(Boolean).map(li
 });
 
 /* =========================================================
-   2. 时区计算工具
+   2. 时区计算
    ========================================================= */
 const LS_KEY = 'timezone-board-v1';
-const WEEK_ZH = { Sun:'周日', Mon:'周一', Tue:'周二', Wed:'周三', Thu:'周四', Fri:'周五', Sat:'周六' };
 const localTZ = (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'Asia/Shanghai';
+const DAY_START = 6, NIGHT_START = 18;   // 06:00–17:59 白天，18:00–05:59 夜间
 
 const fmtCache = new Map();
 function fmtFor(tz){
@@ -496,7 +433,7 @@ function fmtFor(tz){
     f = new Intl.DateTimeFormat('en-US', {
       timeZone: tz, hourCycle: 'h23',
       year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit', weekday: 'short'
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
     });
     fmtCache.set(tz, f);
   }
@@ -511,44 +448,13 @@ function partsIn(tz, date){
   for (const x of fmtFor(tz).formatToParts(date)) if (x.type !== 'literal') p[x.type] = x.value;
   return p;
 }
-// 某时区在给定时刻的 UTC 偏移（分钟，按秒级精确计算）
 function offsetMin(tz, date){
   const p = partsIn(tz, date);
   const localSec = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second) / 1000;
-  const utcSec = Math.floor(date.getTime() / 1000);
-  return Math.round((localSec - utcSec) / 60);
-}
-function dayNumber(tz, date){
-  const p = partsIn(tz, date);
-  return Date.UTC(+p.year, +p.month - 1, +p.day) / 86400000;
+  return Math.round((localSec - Math.floor(date.getTime() / 1000)) / 60);
 }
 function dayOfParts(p){ return Date.UTC(+p.year, +p.month - 1, +p.day) / 86400000; }
-
-function offsetLabel(min){
-  const sign = min < 0 ? '-' : '+';
-  const a = Math.abs(min);
-  const h = String(Math.floor(a / 60)).padStart(2, '0');
-  const m = String(a % 60).padStart(2, '0');
-  return 'UTC' + sign + h + ':' + m;
-}
-function durText(min){
-  const h = Math.floor(min / 60), m = min % 60;
-  if (!h) return m + ' 分钟';
-  if (!m) return h + ' 小时';
-  return h + ' 小时 ' + m + ' 分';
-}
-function diffLabel(diff){
-  if (diff === 0) return '同时区';
-  return diff > 0 ? '快 ' + durText(diff) : '慢 ' + durText(-diff);
-}
-function dateLabel(p, localDay){
-  const delta = Math.round(dayOfParts(p) - localDay);
-  const rel = delta === 0 ? '今天'
-    : delta === 1 ? '明天'
-    : delta === -1 ? '昨天'
-    : (delta > 0 ? '+' + delta + ' 天' : delta + ' 天');
-  return (+p.month) + '月' + (+p.day) + '日 ' + (WEEK_ZH[p.weekday] || '') + ' · ' + rel;
-}
+function isDayHour(h){ return h >= DAY_START && h < NIGHT_START; }
 function timeParts(p){
   let h = +p.hour, hh = h, ampm = '';
   if (state.hour12){ ampm = h < 12 ? 'AM' : 'PM'; hh = h % 12 || 12; }
@@ -558,32 +464,31 @@ function timeParts(p){
     ampm: ampm
   };
 }
+function dateInfoOf(p, localDay){
+  const delta = Math.round(dayOfParts(p) - localDay);
+  const base = (+p.month) + '/' + (+p.day);
+  return { base, delta, text: base + (delta > 0 ? ' +' + delta : delta < 0 ? ' ' + delta : '') };
+}
 const norm = s => String(s || '').toLowerCase().replace(/[\s_'-]/g, '');
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
 /* =========================================================
-   3. 状态
+   3. 状态与元素
    ========================================================= */
-const state = { cities: [], hour12: false, showSec: false, theme: 'dark', desc: false, seq: 1 };
-let nodes = {};          // id -> 卡片内节点
-let lastOffsets = {};    // id -> 上次偏移，用于检测夏令时/排序变化
-const DEFAULT_HINT = '按 UTC 偏移自动竖排 · 列表保存在本机浏览器';
-
+const state = { cities: [], hour12: false, showSec: false, desc: false, seq: 1 };
+let nodes = {}, lastOffsets = {}, lastDayFlags = {};
 const board = document.getElementById('board');
-const hintEl = document.getElementById('hint');
-const countEl = document.getElementById('count');
-const heroClock = document.getElementById('heroClock');
-const heroSub = document.getElementById('heroSub');
+const toastEl = document.getElementById('toast');
+const nowTime = document.getElementById('nowTime');
+const nowMeta = document.getElementById('nowMeta');
 const input = document.getElementById('q');
 const addBtn = document.getElementById('addBtn');
 const suggestBox = document.getElementById('suggest');
 const btnHour = document.getElementById('btnHour');
 const btnSec = document.getElementById('btnSec');
-const btnTheme = document.getElementById('btnTheme');
 const btnOrder = document.getElementById('btnOrder');
-let suggestList = [];
-let hintTimer = null;
+let suggestList = [], toastTimer = null;
 
 /* =========================================================
    4. 存取
@@ -592,7 +497,7 @@ function save(){
   try {
     localStorage.setItem(LS_KEY, JSON.stringify({
       cities: state.cities.map(c => ({ id:c.id, zh:c.zh, en:c.en, country:c.country, tz:c.tz, capital:!!c.capital, key:c.key })),
-      hour12: state.hour12, showSec: state.showSec, theme: state.theme, desc: state.desc, seq: state.seq
+      hour12: state.hour12, showSec: state.showSec, desc: state.desc, seq: state.seq
     }));
   } catch(e){}
 }
@@ -607,7 +512,6 @@ function load(){
       state.seq = state.cities.length + 1;
       state.hour12 = !!raw.hour12;
       state.showSec = !!raw.showSec;
-      state.theme = raw.theme === 'light' ? 'light' : 'dark';
       state.desc = !!raw.desc;
       return true;
     }
@@ -624,15 +528,12 @@ function pushCity(item){
 }
 
 /* =========================================================
-   5. 搜索与添加
+   5. 搜索 / 添加 / 删除
    ========================================================= */
 let IANA_LIST = [];
 try { IANA_LIST = (Intl.supportedValuesOf ? Intl.supportedValuesOf('timeZone') : []) || []; } catch(e){ IANA_LIST = []; }
+const cityLabelFromTZ = tz => tz.split('/').pop().replace(/_/g, ' ');
 
-function cityLabelFromTZ(tz){
-  const seg = tz.split('/').pop().replace(/_/g, ' ');
-  return seg;
-}
 function rank(c, n){
   const zh = norm(c.zh), en = norm(c.en), co = norm(c.country);
   if (zh === n || en === n) return 0;
@@ -658,18 +559,18 @@ function suggestions(text){
     if (out.length >= 10) break;
     if (seenTZ.has(tz)) continue;
     if (norm(tz).includes(n)){
-      out.push({ zh: cityLabelFromTZ(tz), en: cityLabelFromTZ(tz), country: 'IANA 时区', tz, capital: false, key: tz + '|' + tz, iana: true });
+      out.push({ zh: cityLabelFromTZ(tz), en: cityLabelFromTZ(tz), country: 'IANA 时区', tz, capital: false, key: tz + '|' + tz });
       seenTZ.add(tz);
     }
   }
   return out;
 }
-function addCity(item, silent){
+function addCity(item){
   if (!item) return;
-  if (state.cities.some(c => c.key === item.key)){ setHint('已在列表中：' + item.zh); return; }
+  if (state.cities.some(c => c.key === item.key)){ toast('已在列表：' + item.zh); return; }
   pushCity(item);
   save(); render();
-  if (!silent) setHint('已添加 ' + item.zh + ' · ' + offsetLabel(offsetMin(item.tz, new Date())));
+  toast('已添加 ' + item.country + ' ' + item.zh);
 }
 function removeCity(id){
   const idx = state.cities.findIndex(c => c.id === id);
@@ -677,26 +578,20 @@ function removeCity(id){
   const name = state.cities[idx].zh;
   state.cities.splice(idx, 1);
   save(); render();
-  setHint('已移除 ' + name);
+  toast('已移除 ' + name);
 }
 function commit(text){
   const q = String(text || '').trim();
-  if (!q){ setHint('先输入城市、国家或时区名'); input.focus(); return; }
+  if (!q){ toast('先输入城市、国家或时区'); input.focus(); return; }
   const list = suggestions(q);
   if (list.length){
-    addCity(list[0]);
-    input.value = '';
-    suggestBox.hidden = true;
-    return;
+    addCity(list[0]); input.value = ''; suggestBox.hidden = true; return;
   }
-  // 兜底：直接当 IANA 时区解析
   if (isValidTZ(q)){
-    addCity({ zh: cityLabelFromTZ(q), en: cityLabelFromTZ(q), country: 'IANA 时区', tz: q, capital: false, key: q + '|' + q, iana: true });
-    input.value = '';
-    suggestBox.hidden = true;
-    return;
+    addCity({ zh: cityLabelFromTZ(q), en: cityLabelFromTZ(q), country: 'IANA 时区', tz: q, capital: false, key: q + '|' + q });
+    input.value = ''; suggestBox.hidden = true; return;
   }
-  setHint('没找到「' + q + '」，换个城市名或输入 区域/城市 形式的时区（如 Asia/Tokyo）');
+  toast('没找到「' + q + '」');
 }
 function renderSuggest(text){
   const list = suggestions(text);
@@ -707,144 +602,127 @@ function renderSuggest(text){
     const off = offsetMin(c.tz, now);
     const meta = (c.country && c.country !== 'IANA 时区') ? (c.country + ' · ' + c.tz) : c.tz;
     return '<button class="sug" type="button" data-i="' + i + '">' +
-        '<span class="s-name">' + esc(c.zh) + (c.capital ? ' ★' : '') + '</span>' +
-        '<span class="s-meta">' + esc(meta) + '</span>' +
-        '<span class="s-off">' + offsetLabel(off) + '</span>' +
+        '<span class="n">' + esc(c.zh) + '</span>' +
+        '<span class="m">' + esc(meta) + '</span>' +
+        '<span class="o">' + (off < 0 ? '-' : '+') + Math.floor(Math.abs(off) / 60) + '</span>' +
       '</button>';
   }).join('');
   suggestBox.hidden = false;
 }
-function setHint(msg){
-  hintEl.textContent = msg;
-  hintEl.classList.add('flash');
-  clearTimeout(hintTimer);
-  hintTimer = setTimeout(() => {
-    hintEl.textContent = DEFAULT_HINT;
-    hintEl.classList.remove('flash');
-  }, 3200);
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2000);
 }
 
 /* =========================================================
-   6. 渲染
+   6. 渲染：白天区 / 夜间区，区内按 UTC 偏移
    ========================================================= */
-function timeIsURL(c){
-  const name = (c.en || c.zh || '').replace(/ /g, '_');
-  return 'https://time.is/' + encodeURIComponent(name);
-}
-function cardHTML(c, off, localOff, localDay, now){
-  const p = partsIn(c.tz, now);
-  const t = timeParts(p);
+function cardHTML(it, localDay, now){
+  const c = it.c, p = partsIn(c.tz, now), t = timeParts(p);
+  const d = dateInfoOf(p, localDay);
   const isLocal = c.tz === localTZ;
-  return '<article class="card' + (isLocal ? ' local' : '') + '" data-id="' + c.id + '">' +
-      '<div class="info">' +
-        '<div class="city-line">' +
-          '<span class="city-name">' + esc(c.zh) + '</span>' +
-          (c.capital ? '<span class="badge cap">首都</span>' : '') +
-          (c.country ? '<span class="badge">' + esc(c.country) + '</span>' : '') +
-          (isLocal ? '<span class="badge me">本机</span>' : '') +
-        '</div>' +
-        '<div class="date-line">' +
-          '<span data-f="date">' + dateLabel(p, localDay) + '</span>' +
-          '<span class="diff" data-f="diff">' + diffLabel(off - localOff) + '</span>' +
-        '</div>' +
+  return '<article class="card' + (isLocal ? ' me' : '') + '" data-id="' + c.id + '">' +
+      '<button class="x" type="button" data-del="' + c.id + '" aria-label="移除 ' + esc(c.zh) + '">×</button>' +
+      '<div class="place">' +
+        '<span class="country">' + esc(c.country) + '</span>' +
+        '<span class="city">' + esc(c.zh) + '</span>' +
       '</div>' +
-      '<div class="time">' +
-        '<span data-f="hm">' + t.hm + '</span>' +
-        '<span class="sec" data-f="sec">' + t.sec + '</span>' +
-        '<span class="ampm" data-f="ampm">' + t.ampm + '</span>' +
-      '</div>' +
-      '<div class="rowend">' +
-        '<a class="ts" href="' + timeIsURL(c) + '" target="_blank" rel="noopener noreferrer">time.is ↗</a>' +
-        '<button class="del" type="button" data-del="' + c.id + '" title="移除这个地区" aria-label="移除">×</button>' +
+      '<div class="row">' +
+        '<span class="time"><span data-f="hm">' + t.hm + '</span>' +
+          '<span class="sec" data-f="sec">' + t.sec + '</span>' +
+          '<span class="ampm" data-f="ampm">' + t.ampm + '</span></span>' +
+        '<span class="date' + (d.delta !== 0 ? ' shift' : '') + '" data-f="date">' + d.text + '</span>' +
       '</div>' +
     '</article>';
 }
-
+function zoneHTML(kind, items, localDay, now){
+  const head = kind === 'day'
+    ? '<span class="name">☀ 白天</span><span class="hours">06:00–17:59</span>'
+    : '<span class="name">☾ 夜间</span><span class="hours">18:00–05:59</span>';
+  let html = '<section class="zone ' + kind + '"><div class="zone-head">' + head +
+    '<span class="count">' + items.length + '</span></div><div class="grid">';
+  for (const it of items){
+    html += cardHTML(it, localDay, now);
+    lastOffsets[it.c.id] = it.off;
+    lastDayFlags[it.c.id] = it.day;
+  }
+  return html + '</div></section>';
+}
 function render(){
   const now = new Date();
-  const localOff = offsetMin(localTZ, now);
-  const localDay = dayNumber(localTZ, now);
-  nodes = {};
-  lastOffsets = {};
+  const localDay = dayNumberLocal(now);
+  nodes = {}; lastOffsets = {}; lastDayFlags = {};
 
   if (!state.cities.length){
-    board.innerHTML = '<div class="empty">还没有地区。在上面输入一个城市，回车即可加进这条时区轴。</div>';
-    countEl.textContent = '0';
+    board.innerHTML = '<div class="empty">还没有地区，输入一个城市回车加入。<br>列表会按当地时间是白天还是夜间自动分两区。</div>';
     return;
   }
-
-  const items = state.cities.map((c, idx) => ({ c, idx, off: offsetMin(c.tz, now) }));
+  const items = state.cities.map((c, idx) => {
+    const p = partsIn(c.tz, now);
+    return { c, idx, off: offsetMin(c.tz, now), day: isDayHour(+p.hour) };
+  });
   items.sort((a, b) => state.desc ? (b.off - a.off || a.idx - b.idx) : (a.off - b.off || a.idx - b.idx));
 
-  const groups = [];
-  for (const it of items){
-    const g = groups[groups.length - 1];
-    if (g && g.off === it.off) g.items.push(it);
-    else groups.push({ off: it.off, items: [it] });
-  }
+  const dayItems = items.filter(i => i.day);
+  const nightItems = items.filter(i => !i.day);
 
   let html = '';
-  for (const g of groups){
-    html += '<section class="grp">' +
-      '<div class="grp-head">' +
-        '<span class="utc">' + offsetLabel(g.off) + '</span>' +
-        '<span class="cnt">' + g.items.length + ' 个地区</span>' +
-        '<span class="rule"></span>' +
-      '</div><div class="cards">';
-    for (const it of g.items){
-      html += cardHTML(it.c, it.off, localOff, localDay, now);
-      lastOffsets[it.c.id] = it.off;
-    }
-    html += '</div></section>';
-  }
+  if (dayItems.length) html += zoneHTML('day', dayItems, localDay, now);
+  if (nightItems.length) html += zoneHTML('night', nightItems, localDay, now);
   board.innerHTML = html;
-  countEl.textContent = String(state.cities.length);
 
   for (const c of state.cities){
     const el = board.querySelector('[data-id="' + c.id + '"]');
     if (!el) continue;
     nodes[c.id] = {
-      el,
       hm: el.querySelector('[data-f="hm"]'),
       sec: el.querySelector('[data-f="sec"]'),
       ampm: el.querySelector('[data-f="ampm"]'),
-      diff: el.querySelector('[data-f="diff"]'),
       date: el.querySelector('[data-f="date"]')
     };
   }
+}
+function dayNumberLocal(now){
+  const p = partsIn(localTZ, now);
+  return dayOfParts(p);
 }
 
 /* =========================================================
    7. 每秒刷新
    ========================================================= */
-function heroUpdate(now){
-  const lp = partsIn(localTZ, now);
-  const t = timeParts(lp);
-  heroClock.textContent = t.hm + t.sec + (t.ampm ? ' ' + t.ampm : '');
-  heroSub.textContent = (+lp.month) + '月' + (+lp.day) + '日 ' + (WEEK_ZH[lp.weekday] || '') +
-    ' · ' + offsetLabel(offsetMin(localTZ, now)) + ' · ' + localTZ;
-}
 function tick(){
   const now = new Date();
-  heroUpdate(now);
   const localOff = offsetMin(localTZ, now);
-  const localDay = dayNumber(localTZ, now);
-  let dirty = false;
+  const localDay = dayNumberLocal(now);
+  const lp = partsIn(localTZ, now);
+  const lt = timeParts(lp);
+  nowTime.textContent = lt.hm + lt.sec + (lt.ampm ? ' ' + lt.ampm : '');
+  const offTxt = (localOff < 0 ? 'UTC-' : 'UTC+') +
+    String(Math.floor(Math.abs(localOff) / 60)).padStart(2, '0') + ':' +
+    String(Math.abs(localOff) % 60).padStart(2, '0');
+  nowMeta.textContent = (+lp.month) + '/' + (+lp.day) + ' · ' + offTxt;
+  nowMeta.title = localTZ + ' · ' + offTxt;
 
+  let dirty = false;
   for (const c of state.cities){
+    const p = partsIn(c.tz, now);
     const off = offsetMin(c.tz, now);
-    if (lastOffsets[c.id] !== off){ dirty = true; lastOffsets[c.id] = off; }
+    const flag = isDayHour(+p.hour);
+    if (off !== lastOffsets[c.id] || flag !== lastDayFlags[c.id]) dirty = true;
+
     const n = nodes[c.id];
     if (!n) continue;
-    const p = partsIn(c.tz, now);
     const t = timeParts(p);
     n.hm.textContent = t.hm;
     n.sec.textContent = t.sec;
     n.ampm.textContent = t.ampm;
-    n.diff.textContent = diffLabel(off - localOff);
-    n.date.textContent = dateLabel(p, localDay);
+    const d = dateInfoOf(p, localDay);
+    n.date.textContent = d.text;
+    n.date.classList.toggle('shift', d.delta !== 0);
   }
-  if (dirty) render();   // 偏移变了（夏令时切换）→ 重新排序分组
+  if (dirty) render();
 }
 function loop(){
   tick();
@@ -855,17 +733,13 @@ function loop(){
 /* =========================================================
    8. 控件
    ========================================================= */
-function syncToggles(){
-  btnOrder.textContent = state.desc ? 'UTC ↓' : 'UTC ↑';
-  btnOrder.setAttribute('aria-pressed', state.desc ? 'true' : 'false');
-  btnHour.textContent = state.hour12 ? '12 小时' : '24 小时';
+function syncTools(){
+  btnHour.textContent = state.hour12 ? '12 时制' : '24 时制';
   btnHour.setAttribute('aria-pressed', state.hour12 ? 'true' : 'false');
   btnSec.setAttribute('aria-pressed', state.showSec ? 'true' : 'false');
-  btnTheme.textContent = state.theme === 'dark' ? '深色' : '浅色';
-  btnTheme.setAttribute('aria-pressed', state.theme === 'dark' ? 'true' : 'false');
-  document.documentElement.dataset.theme = state.theme;
+  btnOrder.textContent = state.desc ? 'UTC ↓' : 'UTC ↑';
+  btnOrder.setAttribute('aria-pressed', state.desc ? 'true' : 'false');
 }
-
 input.addEventListener('input', () => renderSuggest(input.value));
 input.addEventListener('focus', () => { if (input.value.trim()) renderSuggest(input.value); });
 input.addEventListener('blur', () => setTimeout(() => { suggestBox.hidden = true; }, 120));
@@ -874,44 +748,32 @@ input.addEventListener('keydown', e => {
   else if (e.key === 'Escape'){ suggestBox.hidden = true; }
 });
 addBtn.addEventListener('click', () => commit(input.value));
-
 suggestBox.addEventListener('mousedown', e => {
   const b = e.target.closest('.sug');
   if (!b) return;
   e.preventDefault();
-  const item = suggestList[+b.dataset.i];
-  addCity(item);
-  input.value = '';
-  input.focus();
-  suggestBox.hidden = true;
+  addCity(suggestList[+b.dataset.i]);
+  input.value = ''; input.focus(); suggestBox.hidden = true;
 });
-
 board.addEventListener('click', e => {
   const b = e.target.closest('[data-del]');
   if (!b) return;
   removeCity(+b.dataset.del);
 });
-
-btnHour.addEventListener('click', () => { state.hour12 = !state.hour12; save(); syncToggles(); render(); });
-btnSec.addEventListener('click', () => { state.showSec = !state.showSec; save(); syncToggles(); render(); });
-btnOrder.addEventListener('click', () => { state.desc = !state.desc; save(); syncToggles(); render(); });
-btnTheme.addEventListener('click', () => {
-  state.theme = state.theme === 'dark' ? 'light' : 'dark';
-  save(); syncToggles();
-});
+btnHour.addEventListener('click', () => { state.hour12 = !state.hour12; save(); syncTools(); render(); });
+btnSec.addEventListener('click', () => { state.showSec = !state.showSec; save(); syncTools(); render(); });
+btnOrder.addEventListener('click', () => { state.desc = !state.desc; save(); syncTools(); render(); });
 
 /* =========================================================
    9. 启动
    ========================================================= */
 (function init(){
-  const restored = load();
-  if (!restored){
+  if (!load()){
     ['Asia/Shanghai|深圳', 'Europe/London|伦敦', 'Asia/Dubai|迪拜', 'America/New_York|纽约', 'America/Sao_Paulo|圣保罗', 'Australia/Sydney|悉尼']
       .forEach(k => { const c = DB.find(x => x.key === k); if (c) pushCity(c); });
     save();
   }
-  document.getElementById('localTzName').textContent = localTZ;
-  syncToggles();
+  syncTools();
   render();
   loop();
 })();
