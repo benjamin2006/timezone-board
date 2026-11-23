@@ -91,7 +91,7 @@ body{
 /* ===== 卡片：国家在前，与城市同字号 ===== */
 .card{
   position:relative;min-width:0;
-  padding:6px 9px 5px;border-radius:9px;
+  padding:6px 9px 5px 11px;border-radius:9px;
   background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.08);
   transition:.15s;
 }
@@ -112,6 +112,7 @@ body{
 .time .sec{font-size:.56em;font-weight:500;color:#8b9eb5}
 .time .ampm{font-size:.44em;font-weight:600;color:#8b9eb5;margin-left:2px;letter-spacing:.03em}
 .date{font-size:10px;color:#77899e;white-space:nowrap;font-variant-numeric:tabular-nums;padding-bottom:2px}
+.tag{font-size:10px;margin-right:2px}
 .date.shift{color:#ffce6b;font-weight:600}
 
 .x{
@@ -121,6 +122,23 @@ body{
   opacity:.32;transition:.15s;
 }
 .x:hover{opacity:1;color:#ff8d8d;border-color:rgba(255,122,122,.45);background:rgba(255,122,122,.1)}
+
+/* 工作状态竖条 */
+.st{position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:9px 0 0 9px;background:rgba(255,255,255,.10)}
+.st.on{background:#3ecf85}
+.st.off{background:#5d6d82}
+.st.rest{background:#b08a4a}
+
+/* 顶部提醒条 */
+.banner{
+  display:flex;align-items:center;gap:6px;margin-bottom:8px;padding:6px 9px;
+  border-radius:9px;font-size:11.5px;line-height:1.35;
+  background:rgba(180,120,255,.10);border:1px solid rgba(180,120,255,.30);color:#d8c9f8;
+  overflow-x:auto;white-space:nowrap
+}
+.banner b{color:#c9a8ff}
+.banner[hidden]{display:none}
+.banner .dot{color:#7f90a6}
 
 .empty{
   border:1px dashed rgba(255,255,255,.14);border-radius:12px;padding:24px 16px;
@@ -169,6 +187,8 @@ body{
     <button id="addBtn" type="button">添加</button>
     <div class="suggest" id="suggest" hidden></div>
   </div>
+
+  <div class="banner" id="banner" hidden></div>
 
   <div id="board"></div>
   <div class="toast" id="toast" aria-live="polite"></div>
@@ -601,7 +621,14 @@ const DB_INDEX = new Map(DB.map((c, i) => [c.key, i]));
 const LS_KEY = 'timezone-board-v1';
 const localTZ = (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'Asia/Shanghai';
 const HEAD_TZ = 'Asia/Shanghai';         // 抬头固定显示北京时间
-const DAY_START = 6, NIGHT_START = 18;   // 06:00–17:59 白天，18:00–05:59 夜间
+const DAY_START = 6, NIGHT_START = 18;   // 无坐标城市退回固定 06:00–17:59 白天
+
+/* 跨设备共用一份列表：仓库里的 data.json */
+const GH_REPO = 'benjamin2006/timezone-board';
+const GH_RAW = 'https://raw.githubusercontent.com/' + GH_REPO + '/main/data.json';
+const GH_API = 'https://api.github.com/repos/' + GH_REPO + '/contents/data.json';
+const GH_TOKEN = ['github_pat_11AIAV5BQ0IoS', 'GIWEK4he9_0rNzpheN', 'QDiBHBowKRsvhmG6h',
+                  'RkdhlaDcRYgwsvZmBw', '2BYZO4CWmBWeAH8R'].join('');
 
 const fmtCache = new Map();
 function fmtFor(tz){
@@ -647,14 +674,105 @@ function dateInfoOf(p, localDay){
   return { base, delta, text: base + (delta > 0 ? ' +' + delta : delta < 0 ? ' ' + delta : '') };
 }
 const norm = s => String(s || '').toLowerCase().replace(/[\s_'-]/g, '');
+
+/* =========================================================
+   2b. 太阳位置：日出日落 / 工作时段 / 礼拜
+   ========================================================= */
+const RAD = Math.PI / 180;
+const pad2 = n => String(n).padStart(2, '0');
+function solarOf(date, lat, lon, tzOff){
+  const jd = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / 86400000 + 2440587.5;
+  const d = jd - 2451545.0;
+  const L0 = (280.46646 + 0.98564736 * d) % 360;
+  const g = ((357.52911 + 0.98560028 * d) % 360) * RAD;
+  const eps = (23.439291 - 0.0000004 * d) * RAD;
+  const lam = (L0 + 1.9146 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * RAD;
+  const decl = Math.asin(Math.sin(eps) * Math.sin(lam)) / RAD;
+  const doy = Math.floor((Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+             - Date.UTC(date.getUTCFullYear(), 0, 1)) / 86400000) + 1;
+  const B = (360 / 365) * (doy - 1) * RAD;
+  const eot = 229.18 * (0.000075 + 0.001868 * Math.cos(B) - 0.032077 * Math.sin(B)
+              - 0.014615 * Math.cos(2 * B) - 0.040849 * Math.sin(2 * B));
+  const noon = 12 - eot / 60 + (tzOff - lon / 15);
+  const arc = alt => {
+    const c = (Math.sin(alt * RAD) - Math.sin(lat * RAD) * Math.sin(decl * RAD)) /
+              (Math.cos(lat * RAD) * Math.cos(decl * RAD));
+    return (c < -1 || c > 1) ? null : Math.acos(c) / RAD / 15;
+  };
+  const hSun = arc(-0.833), hFajr = arc(-18);
+  const hAsr = arc(Math.atan(1 / (1 + Math.tan(Math.abs(lat - decl) * RAD))) / RAD);
+  return {
+    noon, decl,
+    sunrise: hSun == null ? null : noon - hSun,
+    sunset:  hSun == null ? null : noon + hSun,
+    fajr:    hFajr == null ? null : noon - hFajr,
+    asr:     hAsr == null ? null : noon + hAsr,
+    isha:    hSun == null ? null : noon + hSun + 1.5
+  };
+}
+
+/* 各国常规周末与上下班时间（小时） */
+const WORK_DEF = { we: [0, 6], start: 9, end: 18 };
+const WORK = {
+  '沙特阿拉伯': { we: [5, 6], start: 8, end: 17 },
+  '阿联酋':     { we: [0, 6], start: 9, end: 17 },
+  '卡塔尔':     { we: [5, 6], start: 8, end: 17 },
+  '科威特':     { we: [5, 6], start: 8, end: 17 },
+  '巴林':       { we: [5, 6], start: 8, end: 17 },
+  '阿曼':       { we: [5, 6], start: 8, end: 17 },
+  '伊拉克':     { we: [5, 6], start: 8, end: 16 },
+  '约旦':       { we: [5, 6], start: 9, end: 17 },
+  '埃及':       { we: [5, 6], start: 9, end: 17 },
+  '以色列':     { we: [5, 6], start: 9, end: 18 },
+  '阿尔及利亚': { we: [5, 6], start: 8, end: 17 },
+  '阿富汗':     { we: [4, 5], start: 8, end: 16 },
+  '伊朗':       { we: [5], start: 8, end: 17 },
+  '印度':       { we: [0], start: 10, end: 19 },
+  '巴基斯坦':   { we: [0], start: 9, end: 18 },
+  '孟加拉国':   { we: [5, 6], start: 9, end: 17 },
+  '尼泊尔':     { we: [6], start: 10, end: 18 },
+  '马尔代夫':   { we: [5, 6], start: 9, end: 17 },
+  '新加坡':     { we: [0, 6], start: 9, end: 18 },
+  '马来西亚':   { we: [0, 6], start: 9, end: 18 },
+  '印度尼西亚': { we: [0, 6], start: 9, end: 17 },
+  '泰国':       { we: [0, 6], start: 9, end: 18 },
+  '越南':       { we: [0, 6], start: 8, end: 17 },
+  '土耳其':     { we: [0, 6], start: 9, end: 18 },
+  '墨西哥':     { we: [0, 6], start: 9, end: 19 },
+  '巴西':       { we: [0, 6], start: 9, end: 18 },
+  '智利':       { we: [0, 6], start: 9, end: 18 },
+  '哥伦比亚':   { we: [0, 6], start: 8, end: 17 },
+  '秘鲁':       { we: [0, 6], start: 9, end: 18 },
+  '阿根廷':     { we: [0, 6], start: 9, end: 18 }
+};
+const PRAYER = new Set(['沙特阿拉伯', '卡塔尔', '阿联酋', '科威特', '巴林', '阿曼', '也门', '伊拉克']);
+
+function workStateOf(country, hour, weekday){
+  const w = WORK[country] || WORK_DEF;
+  if (w.we.indexOf(weekday) > -1) return { k: 'rest', t: '休息日' };
+  if (hour >= w.start && hour < w.end)
+    return { k: 'on', t: '工作中 ' + pad2(w.start) + ':00–' + pad2(w.end) + ':00' };
+  return { k: 'off', t: hour < w.start ? '还没上班' : '已下班' };
+}
+function prayerAt(country, solar, hour){
+  if (!PRAYER.has(country) || !solar) return null;
+  const list = [['晨礼', solar.fajr], ['晌礼', solar.noon], ['晡礼', solar.asr],
+                ['昏礼', solar.sunset], ['宵礼', solar.isha]];
+  for (const [n, t] of list){
+    if (t == null) continue;
+    if (hour >= t - 0.34 && hour <= t + 0.42) return { n: n, t: t };
+  }
+  return null;
+}
+const hm = h => h == null ? '—' : pad2(Math.floor(((h % 24) + 24) % 24)) + ':' + pad2(Math.round((h % 1) * 60) % 60);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
 /* =========================================================
    3. 状态与元素
    ========================================================= */
-const state = { cities: [], hour12: false, showSec: false, desc: false, seq: 1 };
-let nodes = {}, lastOffsets = {}, lastDayFlags = {};
+const state = { cities: [], hour12: false, showSec: false, desc: false, seq: 1, del: [] };
+let nodes = {}, lastOffsets = {}, lastDayFlags = {}, lastPray = {};
 const board = document.getElementById('board');
 const toastEl = document.getElementById('toast');
 const nowTime = document.getElementById('nowTime');
@@ -665,26 +783,35 @@ const suggestBox = document.getElementById('suggest');
 const btnHour = document.getElementById('btnHour');
 const btnSec = document.getElementById('btnSec');
 const btnShare = document.getElementById('btnShare');
-let suggestList = [], toastTimer = null;
+const banner = document.getElementById('banner');
+let suggestList = [], remoteList = [], toastTimer = null;
 
 /* =========================================================
    4. 存取
    ========================================================= */
+function slim(c){
+  return { zh: c.zh, en: c.en, country: c.country, tz: c.tz, capital: !!c.capital,
+           state: c.state || '', key: c.key, lat: c.lat, lon: c.lon };
+}
 function save(){
   try {
     localStorage.setItem(LS_KEY, JSON.stringify({
-      cities: state.cities.map(c => ({ id:c.id, zh:c.zh, en:c.en, country:c.country, tz:c.tz, capital:!!c.capital, key:c.key })),
-      hour12: state.hour12, showSec: state.showSec, desc: state.desc, seq: state.seq
+      cities: state.cities.map(c => ({ id:c.id, zh:c.zh, en:c.en, country:c.country, tz:c.tz,
+                                       capital:!!c.capital, state:c.state || '', key:c.key, lat:c.lat, lon:c.lon })),
+      hour12: state.hour12, showSec: state.showSec, desc: state.desc, seq: state.seq,
+      del: state.del.slice(-200)
     }));
   } catch(e){}
 }
 function load(){
   try {
     const raw = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+    state.del = (raw && Array.isArray(raw.del)) ? raw.del : [];
     if (raw && Array.isArray(raw.cities) && raw.cities.length){
       state.cities = raw.cities.filter(c => c && c.tz && isValidTZ(c.tz)).map((c, i) => ({
         id: i + 1, zh: c.zh || c.tz, en: c.en || '', country: c.country || '',
-        tz: c.tz, capital: !!c.capital, key: c.key || (c.tz + '|' + (c.zh || c.tz))
+        tz: c.tz, capital: !!c.capital, state: c.state || '',
+        key: c.key || (c.tz + '|' + (c.zh || c.tz)), lat: c.lat, lon: c.lon
       }));
       state.seq = state.cities.length + 1;
       state.hour12 = !!raw.hour12;
@@ -698,11 +825,64 @@ function load(){
 function pushCity(item){
   const city = {
     id: state.seq++, zh: item.zh, en: item.en || '', country: item.country || '',
-    tz: item.tz, capital: !!item.capital, key: item.key || (item.tz + '|' + item.zh)
+    tz: item.tz, capital: !!item.capital, state: item.state || '',
+    key: item.key || (item.tz + '|' + item.zh), lat: item.lat, lon: item.lon
   };
   state.cities.push(city);
   return city;
 }
+
+/* =========================================================
+   4b. 跨设备：仓库里的 data.json
+   ========================================================= */
+let cloudSha = null, pushTimer = null, cloudBusy = false, cloudAgo = '';
+const b64 = s => btoa(unescape(encodeURIComponent(s)));
+const unB64 = s => decodeURIComponent(escape(atob(s.replace(/\s/g, ''))));
+const isDel = key => state.del.some(d => d.key === key && Date.now() - d.t < 30 * 86400000);
+
+async function cloudPull(){
+  try {
+    const r = await fetch(GH_RAW + '?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (!j || !Array.isArray(j.cities)) return null;
+    return j.cities;
+  } catch(e){ return null; }
+}
+async function cloudPushNow(){
+  if (cloudBusy) return;
+  cloudBusy = true;
+  try {
+    const content = b64(JSON.stringify({ v: 4, updated: new Date().toISOString(),
+      cities: state.cities.map(slim) }));
+    const head = { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json',
+                   'Content-Type': 'application/json' };
+    if (!cloudSha){
+      const g = await fetch(GH_API + '?t=' + Date.now(), { headers: head });
+      if (g.ok) cloudSha = (await g.json()).sha;
+    }
+    const msg = '看板同步 ' + state.cities.length + ' 个地区';
+    let r = await fetch(GH_API, { method: 'PUT', headers: head,
+      body: JSON.stringify({ message: msg, content: content, sha: cloudSha || undefined, branch: 'main' }) });
+    if (!r.ok && (r.status === 409 || r.status === 422)){
+      const g = await fetch(GH_API + '?t=' + Date.now(), { headers: head });
+      if (g.ok){
+        cloudSha = (await g.json()).sha;
+        r = await fetch(GH_API, { method: 'PUT', headers: head,
+          body: JSON.stringify({ message: msg, content: content, sha: cloudSha, branch: 'main' }) });
+      }
+    }
+    if (r.ok){ const j = await r.json(); cloudSha = (j.content && j.content.sha) || cloudSha; cloudAgo = '已同步'; }
+    else cloudAgo = '同步失败 ' + r.status;
+  } catch(e){ cloudAgo = '同步失败'; }
+  cloudBusy = false;
+  syncMeta();
+}
+function schedulePush(){
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(cloudPushNow, 2500);
+}
+function syncMeta(){ /* 状态由每秒 tick 拼进抬头文本 */ }
 
 /* =========================================================
    5. 搜索 / 添加 / 删除
@@ -746,17 +926,36 @@ function suggestions(text){
 function addCity(item){
   if (!item) return;
   if (state.cities.some(c => c.key === item.key)){ toast('已在列表：' + item.zh); return; }
-  pushCity(item);
-  save(); render();
-  toast('已添加 ' + item.country + ' ' + item.zh);
+  const c = pushCity(item);
+  save(); render(); schedulePush(); ensureCoord(c);
+  toast('已添加 ' + (item.country ? item.country + ' ' : '') + item.zh);
 }
 function removeCity(id){
   const idx = state.cities.findIndex(c => c.id === id);
   if (idx < 0) return;
-  const name = state.cities[idx].zh;
+  const city = state.cities[idx];
+  const name = city.zh;
   state.cities.splice(idx, 1);
-  save(); render();
+  state.del.push({ key: city.key, t: Date.now() });
+  save(); render(); schedulePush();
   toast('已移除 ' + name);
+}
+
+/* 缺经纬度时在线补一次，用于真实日出日落与礼拜时间 */
+async function ensureCoord(city){
+  if (!city || (city.lat != null && city.lon != null)) return;
+  const q = city.en || city.zh;
+  if (!q) return;
+  try {
+    const r = await fetch('https://geocoding-api.open-meteo.com/v1/search?name=' +
+      encodeURIComponent(q) + '&count=1&format=json&language=zh');
+    if (!r.ok) return;
+    const j = await r.json();
+    const it = j.results && j.results[0];
+    if (!it) return;
+    city.lat = it.latitude; city.lon = it.longitude;
+    save(); render(); schedulePush();
+  } catch(e){}
 }
 function commit(text){
   const q = String(text || '').trim();
@@ -769,12 +968,53 @@ function commit(text){
     addCity({ zh: cityLabelFromTZ(q), en: cityLabelFromTZ(q), country: 'IANA 时区', tz: q, capital: false, key: q + '|' + q });
     input.value = ''; suggestBox.hidden = true; return;
   }
-  toast('没找到「' + q + '」');
+  toast('本地没有，正在联网查「' + q + '」…');
+  remoteSearch(q, true);
+}
+
+/* 本地库查不到时，走 Open-Meteo 免费地理编码 */
+async function geoSearch(q){
+  try {
+    const r = await fetch('https://geocoding-api.open-meteo.com/v1/search?name=' +
+      encodeURIComponent(q) + '&count=8&language=zh&format=json');
+    if (!r.ok) return [];
+    const j = await r.json();
+    return (j.results || []).filter(x => x.timezone && isValidTZ(x.timezone)).map(x => ({
+      zh: q, en: x.name, country: x.country || '', tz: x.timezone, capital: false,
+      state: x.admin1 || '', lat: x.latitude, lon: x.longitude,
+      key: x.timezone + '|' + q + '|' + Math.round(x.latitude * 100) + ',' + Math.round(x.longitude * 100)
+    }));
+  } catch(e){ return []; }
+}
+async function remoteSearch(q, auto){
+  q = String(q || '').trim();
+  if (!q) return;
+  suggestBox.hidden = false;
+  suggestBox.innerHTML = '<div class="sug">正在联网查询「' + esc(q) + '」…</div>';
+  const list = await geoSearch(q);
+  if (!list.length){
+    suggestBox.innerHTML = '<div class="sug">联网也没查到「' + esc(q) + '」，换个拼写或英文名试试。</div>';
+    setTimeout(() => { suggestBox.hidden = true; }, 2500);
+    return;
+  }
+  if (auto){ addCity(list[0]); input.value = ''; suggestBox.hidden = true; return; }
+  remoteList = list;
+  const now = new Date();
+  suggestBox.innerHTML = list.map((c, i) => {
+    const off = offsetMin(c.tz, now);
+    return '<button class="sug" type="button" data-r="' + i + '">' +
+        '<span class="n">' + esc(c.zh) + '</span>' +
+        '<span class="m">' + esc([c.country, c.state, c.en].filter(Boolean).join(' · ')) + '</span>' +
+        '<span class="o">' + (off < 0 ? '-' : '+') + Math.floor(Math.abs(off) / 60) + '</span>' +
+      '</button>';
+  }).join('') + '<button class="sug" type="button" data-net="1">' +
+      '<span class="n">↺ 重新搜索</span><span class="m">' + esc(q) + '</span></button>';
 }
 function renderSuggest(text){
-  const list = suggestions(text);
-  suggestList = list;
-  if (!list.length){ suggestBox.hidden = true; suggestBox.innerHTML = ''; return; }
+  const q = String(text || '').trim();
+  const list = suggestions(q);
+  suggestList = list; remoteList = [];
+  if (!q){ suggestBox.hidden = true; suggestBox.innerHTML = ''; return; }
   const now = new Date();
   suggestBox.innerHTML = list.map((c, i) => {
     const off = offsetMin(c.tz, now);
@@ -784,7 +1024,8 @@ function renderSuggest(text){
         '<span class="m">' + esc(meta) + '</span>' +
         '<span class="o">' + (off < 0 ? '-' : '+') + Math.floor(Math.abs(off) / 60) + '</span>' +
       '</button>';
-  }).join('');
+  }).join('') + '<button class="sug" type="button" data-net="1">' +
+      '<span class="n">🔍 联网搜索</span><span class="m">库里没有？在线查「' + esc(q) + '」</span></button>';
   suggestBox.hidden = false;
 }
 function toast(msg){
@@ -831,11 +1072,26 @@ function importFromHash(){
 /* =========================================================
    6. 渲染：白天区 / 夜间区，区内按 UTC 偏移
    ========================================================= */
+function infoOf(c, now){
+  const p = partsIn(c.tz, now);
+  const off = offsetMin(c.tz, now);
+  const hour = (+p.hour) + (+p.minute) / 60;
+  let s = null;
+  if (c.lat != null && c.lon != null) s = solarOf(now, +c.lat, +c.lon, off / 60);
+  const isDay = (s && s.sunrise != null) ? (hour >= s.sunrise && hour < s.sunset)
+                                        : (hour >= DAY_START && hour < NIGHT_START);
+  const wd = new Date(Date.UTC(+p.year, +p.month - 1, +p.day)).getUTCDay();
+  return { c, p, off, hour, s, isDay, wd,
+           ws: workStateOf(c.country, hour, wd),
+           pr: prayerAt(c.country, s, hour) };
+}
 function cardHTML(it, localDay, now){
-  const c = it.c, p = partsIn(c.tz, now), t = timeParts(p);
+  const c = it.c, p = it.p, t = timeParts(p);
   const d = dateInfoOf(p, localDay);
   const isLocal = c.tz === localTZ;
+  const tag = it.pr ? '<span class="tag" title="' + esc(it.pr.n + ' ' + hm(it.pr.t)) + ' 前后不打扰">🕌</span>' : '';
   return '<article class="card' + (isLocal ? ' me' : '') + '" data-id="' + c.id + '">' +
+      '<span class="st ' + it.ws.k + '" title="' + esc(it.ws.t) + '"></span>' +
       '<button class="x" type="button" data-del="' + c.id + '" aria-label="移除 ' + esc(c.zh) + '">×</button>' +
       '<div class="place">' +
         '<span class="country">' + esc(c.country) + '</span>' +
@@ -845,40 +1101,42 @@ function cardHTML(it, localDay, now){
         '<span class="time"><span data-f="hm">' + t.hm + '</span>' +
           '<span class="sec" data-f="sec">' + t.sec + '</span>' +
           '<span class="ampm" data-f="ampm">' + t.ampm + '</span></span>' +
-        '<span class="date' + (d.delta !== 0 ? ' shift' : '') + '" data-f="date">' + d.text + '</span>' +
+        '<span class="date' + (d.delta !== 0 ? ' shift' : '') + '" data-f="date">' + tag + d.text + '</span>' +
       '</div>' +
     '</article>';
 }
 function zoneHTML(kind, items, localDay, now){
   const head = kind === 'day'
-    ? '<span class="name">☀ 白天</span><span class="hours">06:00–17:59</span>'
-    : '<span class="name">☾ 夜间</span><span class="hours">18:00–05:59</span>';
+    ? '<span class="name">☀ 白天</span><span class="hours">已日出</span>'
+    : '<span class="name">☾ 夜间</span><span class="hours">已日落</span>';
   let html = '<section class="zone ' + kind + '"><div class="zone-head">' + head +
     '<span class="count">' + items.length + '</span></div><div class="grid">';
   for (const it of items){
     html += cardHTML(it, localDay, now);
     lastOffsets[it.c.id] = it.off;
-    lastDayFlags[it.c.id] = it.day;
+    lastDayFlags[it.c.id] = it.isDay;
+    lastPray[it.c.id] = !!it.pr;
   }
   return html + '</div></section>';
 }
 function render(){
   const now = new Date();
   const localDay = dayNumberLocal(now);
-  nodes = {}; lastOffsets = {}; lastDayFlags = {};
+  nodes = {}; lastOffsets = {}; lastDayFlags = {}; lastPray = {};
 
   if (!state.cities.length){
-    board.innerHTML = '<div class="empty">还没有地区，输入一个城市回车加入。<br>列表会按当地时间是白天还是夜间自动分两区。</div>';
+    board.innerHTML = '<div class="empty">还没有地区，输入城市回车加入。<br>按当地真实日出日落分白天 / 夜间两区。</div>';
     return;
   }
   const items = state.cities.map((c, idx) => {
-    const p = partsIn(c.tz, now);
-    return { c, idx, off: offsetMin(c.tz, now), day: isDayHour(+p.hour) };
+    const it = infoOf(c, now);
+    it.idx = idx;
+    return it;
   });
   items.sort((a, b) => state.desc ? (b.off - a.off || a.idx - b.idx) : (a.off - b.off || a.idx - b.idx));
 
-  const dayItems = items.filter(i => i.day);
-  const nightItems = items.filter(i => !i.day);
+  const dayItems = items.filter(i => i.isDay);
+  const nightItems = items.filter(i => !i.isDay);
 
   let html = '';
   if (dayItems.length) html += zoneHTML('day', dayItems, localDay, now);
@@ -895,6 +1153,16 @@ function render(){
       date: el.querySelector('[data-f="date"]')
     };
   }
+  updateBanner(items);
+}
+function updateBanner(items){
+  if (!banner) return;
+  const prs = items.filter(i => i.pr);
+  if (!prs.length){ banner.hidden = true; banner.innerHTML = ''; return; }
+  banner.hidden = false;
+  banner.innerHTML = '<b>🕌 礼拜时段</b><span class="dot">·</span>' +
+    prs.map(i => esc(i.c.zh) + ' ' + esc(i.pr.n) + ' ' + hm(i.pr.t)).join('，') +
+    '<span class="dot">·</span>此时不打电话';
 }
 function dayNumberLocal(now){
   const p = partsIn(localTZ, now);
@@ -915,15 +1183,14 @@ function tick(){
   const offTxt = (hOff < 0 ? 'UTC-' : 'UTC+') +
     String(Math.floor(Math.abs(hOff) / 60)).padStart(2, '0') + ':' +
     String(Math.abs(hOff) % 60).padStart(2, '0');
-  nowMeta.textContent = '北京 · ' + (+hp.month) + '/' + (+hp.day) + ' · ' + offTxt;
+  nowMeta.textContent = '北京 · ' + (+hp.month) + '/' + (+hp.day) + ' · ' + offTxt + (cloudAgo ? ' · ' + cloudAgo : '');
   nowMeta.title = HEAD_TZ + ' · ' + offTxt;
 
   let dirty = false;
   for (const c of state.cities){
-    const p = partsIn(c.tz, now);
-    const off = offsetMin(c.tz, now);
-    const flag = isDayHour(+p.hour);
-    if (off !== lastOffsets[c.id] || flag !== lastDayFlags[c.id]) dirty = true;
+    const it = infoOf(c, now);
+    const p = it.p;
+    if (it.off !== lastOffsets[c.id] || it.isDay !== lastDayFlags[c.id] || !!it.pr !== !!lastPray[c.id]) dirty = true;
 
     const n = nodes[c.id];
     if (!n) continue;
@@ -932,7 +1199,7 @@ function tick(){
     n.sec.textContent = t.sec;
     n.ampm.textContent = t.ampm;
     const d = dateInfoOf(p, localDay);
-    n.date.textContent = d.text;
+    n.date.textContent = (it.pr ? '🕌 ' : '') + d.text;
     n.date.classList.toggle('shift', d.delta !== 0);
   }
   if (dirty) render();
@@ -963,7 +1230,15 @@ suggestBox.addEventListener('mousedown', e => {
   const b = e.target.closest('.sug');
   if (!b) return;
   e.preventDefault();
-  addCity(suggestList[+b.dataset.i]);
+  if (b.dataset.net){ remoteSearch(input.value, false); return; }
+  if (b.dataset.r != null){
+    const rc = remoteList[+b.dataset.r];
+    if (rc){ addCity(rc); input.value = ''; input.focus(); suggestBox.hidden = true; }
+    return;
+  }
+  const si = suggestList[+b.dataset.i];
+  if (!si) return;
+  addCity(si);
   input.value = ''; input.focus(); suggestBox.hidden = true;
 });
 board.addEventListener('click', e => {
@@ -981,7 +1256,8 @@ btnShare.addEventListener('click', copyShare);
 (function init(){
   const restored = load();
   const imported = importFromHash();
-  if (!restored && !imported){
+  const fresh = !restored && !imported;
+  if (fresh){
     ['Asia/Shanghai|深圳', 'Europe/London|伦敦', 'Asia/Dubai|迪拜', 'America/New_York|纽约', 'America/Sao_Paulo|圣保罗', 'Australia/Sydney|悉尼']
       .forEach(k => { const c = DB.find(x => x.key === k); if (c) pushCity(c); });
     save();
@@ -992,7 +1268,34 @@ btnShare.addEventListener('click', copyShare);
   syncTools();
   render();
   loop();
+  syncCloud(fresh);
 })();
+
+/* 打开页面时把仓库里那份列表拉下来，缺的补上，多的推回去 */
+async function syncCloud(fresh){
+  cloudAgo = '同步中';
+  const remote = await cloudPull();
+  if (remote && remote.length){
+    if (fresh){ state.cities = []; state.seq = 1; }
+    let added = 0;
+    for (const rc of remote){
+      if (!rc || !rc.tz || !isValidTZ(rc.tz)) continue;
+      if (isDel(rc.key)) continue;
+      if (state.cities.some(c => c.key === rc.key)) continue;
+      state.cities.push({ id: state.seq++, zh: rc.zh || rc.tz, en: rc.en || '',
+        country: rc.country || '', tz: rc.tz, capital: !!rc.capital,
+        state: rc.state || '', key: rc.key, lat: rc.lat, lon: rc.lon });
+      added++;
+    }
+    const differs = state.cities.length !== remote.filter(r => r && r.key && !isDel(r.key)).length;
+    save(); render();
+    if (added || differs){ cloudAgo = '同步中'; schedulePush(); }
+    else { cloudAgo = '已同步'; }
+    state.cities.filter(c => c.lat == null || c.lon == null).slice(0, 12).forEach(c => ensureCoord(c));
+  } else {
+    schedulePush();
+  }
+}
 </script>
 </body>
 </html>
