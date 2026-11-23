@@ -140,6 +140,19 @@ body{
 .banner[hidden]{display:none}
 .banner .dot{color:#7f90a6}
 
+/* 底部假期备份 */
+.holbox{margin-top:8px;padding:6px 9px;border-radius:10px;font-size:11px;line-height:1.5;
+  border:1px solid rgba(110,230,170,.22);background:rgba(50,200,140,.06);color:#a9c8bb}
+.holhead{display:flex;align-items:center;gap:5px;color:#9fdcc0}
+.holhead button{margin-left:auto;font:inherit;font-size:10px;padding:2px 8px;border-radius:6px;cursor:pointer;
+  border:1px solid rgba(255,255,255,.14);background:transparent;color:inherit}
+.holrows{display:flex;flex-direction:column;gap:2px;margin-top:4px}
+.hrow{display:flex;gap:6px;white-space:nowrap;overflow:hidden}
+.hrow .d{color:#72d2a2;font-variant-numeric:tabular-nums;flex:0 0 auto}
+.hrow .c{color:#cfe6dd;flex:0 0 auto}
+.hrow .n{color:#8fa9a0;overflow:hidden;text-overflow:ellipsis}
+.hrow .w{margin-left:auto;color:#7f9a90;flex:0 0 auto}
+
 .empty{
   border:1px dashed rgba(255,255,255,.14);border-radius:12px;padding:24px 16px;
   text-align:center;color:#8294aa;font-size:12.5px;line-height:1.7;
@@ -191,6 +204,15 @@ body{
   <div class="banner" id="banner" hidden></div>
 
   <div id="board"></div>
+
+  <div class="holbox" id="holBox" hidden>
+    <div class="holhead">
+      <span>📅 未来 45 天假期</span><span id="holCount"></span>
+      <button id="holMore" type="button">展开</button>
+    </div>
+    <div class="holrows" id="holRows"></div>
+  </div>
+
   <div class="toast" id="toast" aria-live="polite"></div>
 </div>
 
@@ -747,6 +769,83 @@ const WORK = {
 };
 const PRAYER = new Set(['沙特阿拉伯', '卡塔尔', '阿联酋', '科威特', '巴林', '阿曼', '也门', '伊拉克']);
 
+/* 节假日：'MM-DD' 每年重复；'YYYY-MM-DD' 只算那一年（伊斯兰/农历节日按官方公布日期） */
+const HOL = {
+'中国': [['01-01','元旦'],['05-01','劳动节'],['10-01','国庆节'],['2027-02-06','春节']],
+'中国香港': [['01-01','元旦'],['07-01','回归日'],['10-01','国庆'],['2027-02-06','春节']],
+'中国台湾': [['01-01','元旦'],['10-10','双十节'],['2027-02-06','春节']],
+'日本': [['01-01','元旦'],['02-11','建国纪念日'],['04-29','昭和日'],['05-03','宪法日'],['05-04','绿之日'],['05-05','儿童节'],['11-03','文化日'],['11-23','勤劳感谢日']],
+'韩国': [['01-01','元旦'],['03-01','三一节'],['05-05','儿童节'],['06-06','显忠日'],['08-15','光复节'],['10-03','开天节'],['10-09','韩文节'],['12-25','圣诞'],['2027-02-07','春节']],
+'新加坡': [['01-01','元旦'],['05-01','劳动节'],['08-09','国庆'],['12-25','圣诞'],['2027-02-06','农历新年']],
+'马来西亚': [['01-01','元旦'],['05-01','劳动节'],['08-31','国庆'],['12-25','圣诞'],['2027-02-06','农历新年'],['2027-03-10','开斋节']],
+'泰国': [['01-01','元旦'],['04-13','泼水节'],['12-05','父亲节'],['12-10','宪法日']],
+'越南': [['01-01','元旦'],['04-30','统一日'],['09-02','国庆'],['2027-02-06','春节']],
+'印度尼西亚': [['01-01','元旦'],['05-01','劳动节'],['08-17','独立日'],['12-25','圣诞'],['2027-03-10','开斋节']],
+'菲律宾': [['01-01','元旦'],['05-01','劳动节'],['06-12','独立日'],['11-30','博尼法西奥日'],['12-25','圣诞']],
+'印度': [['01-26','共和国日'],['08-15','独立日'],['10-02','甘地诞辰'],['2027-10-29','排灯节']],
+'巴基斯坦': [['03-23','巴基斯坦日'],['08-14','独立日'],['12-25','圣诞'],['2027-03-10','开斋节']],
+'孟加拉国': [['03-26','独立日'],['12-16','胜利日'],['2027-03-10','开斋节']],
+'沙特阿拉伯': [['02-22','建国日'],['09-23','国庆'],['2027-03-10','开斋节'],['2027-05-17','宰牲节']],
+'阿联酋': [['01-01','元旦'],['12-02','国庆'],['2027-03-10','开斋节'],['2027-05-17','宰牲节']],
+'卡塔尔': [['12-18','国庆'],['2027-03-10','开斋节'],['2027-05-17','宰牲节']],
+'科威特': [['02-25','国庆'],['02-26','解放日'],['2027-03-10','开斋节']],
+'阿曼': [['11-18','国庆'],['2027-03-10','开斋节']],
+'巴林': [['12-16','国庆'],['2027-03-10','开斋节']],
+'埃及': [['01-25','革命日'],['07-23','革命日'],['10-06','建军节'],['2027-03-10','开斋节']],
+'以色列': [['2027-03-28','逾越节']],
+'土耳其': [['01-01','元旦'],['04-23','国家主权日'],['05-19','青年节'],['10-29','共和国日'],['2027-03-10','开斋节'],['2027-05-17','宰牲节']],
+'英国': [['01-01','元旦'],['12-25','圣诞'],['12-26','节礼日'],['2027-03-29','复活节星期一']],
+'法国': [['01-01','元旦'],['05-01','劳动节'],['07-14','国庆'],['12-25','圣诞'],['2027-03-29','复活节星期一']],
+'德国': [['01-01','元旦'],['05-01','劳动节'],['10-03','统一日'],['12-25','圣诞'],['12-26','圣诞翌日'],['2027-03-29','复活节星期一']],
+'荷兰': [['01-01','元旦'],['04-27','国王日'],['05-05','解放日'],['12-25','圣诞'],['12-26','圣诞翌日'],['2027-03-29','复活节星期一']],
+'比利时': [['01-01','元旦'],['07-21','国庆'],['12-25','圣诞'],['2027-03-29','复活节星期一']],
+'瑞士': [['01-01','元旦'],['08-01','国庆'],['12-25','圣诞'],['2027-03-29','复活节星期一']],
+'奥地利': [['01-01','元旦'],['10-26','国庆'],['12-25','圣诞'],['12-26','圣诞翌日'],['2027-03-29','复活节星期一']],
+'意大利': [['01-01','元旦'],['04-25','解放日'],['06-02','共和国日'],['08-15','八月节'],['12-25','圣诞'],['12-26','圣斯德望日'],['2027-03-29','复活节星期一']],
+'西班牙': [['01-01','元旦'],['05-01','劳动节'],['10-12','国庆'],['12-06','宪法日'],['12-25','圣诞'],['2027-03-29','复活节星期一']],
+'葡萄牙': [['01-01','元旦'],['04-25','自由日'],['06-10','国庆'],['08-15','圣母升天'],['12-25','圣诞'],['2027-03-29','复活节星期一']],
+'波兰': [['01-01','元旦'],['05-01','劳动节'],['05-03','宪法日'],['11-11','独立日'],['12-25','圣诞'],['12-26','圣诞翌日'],['2027-03-29','复活节星期一']],
+'瑞典': [['01-01','元旦'],['06-06','国庆'],['12-25','圣诞'],['12-26','圣诞翌日'],['2027-03-29','复活节星期一']],
+'俄罗斯': [['01-01','元旦'],['05-01','劳动节'],['05-09','胜利日'],['06-12','俄罗斯日'],['11-04','民族团结日']],
+'南非': [['01-01','元旦'],['03-21','人权日'],['04-27','自由日'],['06-16','青年日'],['08-09','妇女节'],['09-24','遗产日'],['12-16','和解日'],['12-25','圣诞'],['12-26','亲善日']],
+'美国': [['01-01','元旦'],['07-04','独立日'],['12-25','圣诞'],['2026-11-26','感恩节'],['2027-11-25','感恩节']],
+'加拿大': [['01-01','元旦'],['07-01','加拿大日'],['12-25','圣诞'],['12-26','节礼日']],
+'墨西哥': [['01-01','元旦'],['05-01','劳动节'],['09-16','独立日'],['12-25','圣诞']],
+'巴西': [['01-01','元旦'],['04-21','蒂拉登特斯日'],['05-01','劳动节'],['09-07','独立日'],['10-12','圣母日'],['12-25','圣诞']],
+'阿根廷': [['01-01','元旦'],['05-01','劳动节'],['05-25','五月革命日'],['07-09','独立日'],['12-25','圣诞']],
+'智利': [['01-01','元旦'],['05-01','劳动节'],['09-18','独立日'],['12-25','圣诞']],
+'哥伦比亚': [['01-01','元旦'],['05-01','劳动节'],['07-20','独立日'],['08-07','博亚卡战役'],['12-25','圣诞']],
+'秘鲁': [['01-01','元旦'],['05-01','劳动节'],['07-28','独立日'],['12-25','圣诞']],
+'澳大利亚': [['01-01','元旦'],['01-26','澳洲日'],['04-25','澳新军团日'],['12-25','圣诞'],['12-26','节礼日']],
+'新西兰': [['01-01','元旦'],['02-06','怀唐伊日'],['04-25','澳新军团日'],['12-25','圣诞'],['12-26','节礼日']],
+'克罗地亚': [['01-01','元旦'],['06-22','反法西斯日'],['08-05','胜利日'],['12-25','圣诞']]
+};
+const ymdOf = d => d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate());
+function holOn(country, s){
+  const arr = HOL[country];
+  if (!arr) return [];
+  const md = s.slice(5), out = [];
+  for (const h of arr) if (h[0].length === 5 ? h[0] === md : h[0] === s) out.push(h[1]);
+  return out;
+}
+function upcomingHolidays(days){
+  const list = [], seen = new Set(), now = new Date();
+  for (let i = 0; i < days; i++){
+    const s = ymdOf(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + i)));
+    for (const c of state.cities){
+      for (const n of holOn(c.country, s)){
+        const k = c.country + s + n;
+        if (seen.has(k)) continue;
+        seen.add(k);
+        list.push({ date: s, md: (+s.slice(5, 7)) + '/' + (+s.slice(8, 10)),
+                    country: c.country, name: n, inDays: i });
+      }
+    }
+  }
+  return list;
+}
+
+
 function workStateOf(country, hour, weekday){
   const w = WORK[country] || WORK_DEF;
   if (w.we.indexOf(weekday) > -1) return { k: 'rest', t: '休息日' };
@@ -784,7 +883,11 @@ const btnHour = document.getElementById('btnHour');
 const btnSec = document.getElementById('btnSec');
 const btnShare = document.getElementById('btnShare');
 const banner = document.getElementById('banner');
-let suggestList = [], remoteList = [], toastTimer = null;
+const holBox = document.getElementById('holBox');
+const holRows = document.getElementById('holRows');
+const holCount = document.getElementById('holCount');
+const holMore = document.getElementById('holMore');
+let suggestList = [], remoteList = [], toastTimer = null, holOpen = false;
 
 /* =========================================================
    4. 存取
@@ -1083,13 +1186,15 @@ function infoOf(c, now){
   const wd = new Date(Date.UTC(+p.year, +p.month - 1, +p.day)).getUTCDay();
   return { c, p, off, hour, s, isDay, wd,
            ws: workStateOf(c.country, hour, wd),
-           pr: prayerAt(c.country, s, hour) };
+           pr: prayerAt(c.country, s, hour),
+           hol: holOn(c.country, p.year + '-' + p.month + '-' + p.day) };
 }
 function cardHTML(it, localDay, now){
   const c = it.c, p = it.p, t = timeParts(p);
   const d = dateInfoOf(p, localDay);
   const isLocal = c.tz === localTZ;
-  const tag = it.pr ? '<span class="tag" title="' + esc(it.pr.n + ' ' + hm(it.pr.t)) + ' 前后不打扰">🕌</span>' : '';
+  const tag = (it.pr ? '<span class="tag" title="' + esc(it.pr.n + ' ' + hm(it.pr.t)) + ' 前后不打扰">🕌</span>' : '') +
+              (it.hol && it.hol.length ? '<span class="tag" title="' + esc(it.hol.join('、')) + '">🎉</span>' : '');
   return '<article class="card' + (isLocal ? ' me' : '') + '" data-id="' + c.id + '">' +
       '<span class="st ' + it.ws.k + '" title="' + esc(it.ws.t) + '"></span>' +
       '<button class="x" type="button" data-del="' + c.id + '" aria-label="移除 ' + esc(c.zh) + '">×</button>' +
@@ -1126,6 +1231,7 @@ function render(){
 
   if (!state.cities.length){
     board.innerHTML = '<div class="empty">还没有地区，输入城市回车加入。<br>按当地真实日出日落分白天 / 夜间两区。</div>';
+    holBox.hidden = true;
     return;
   }
   const items = state.cities.map((c, idx) => {
@@ -1154,15 +1260,35 @@ function render(){
     };
   }
   updateBanner(items);
+  renderHolidays();
+}
+function renderHolidays(){
+  const list = upcomingHolidays(45);
+  if (!list.length){ holBox.hidden = true; holRows.innerHTML = ''; return; }
+  holBox.hidden = false;
+  holCount.textContent = '（' + list.length + '）';
+  const show = holOpen ? list : list.slice(0, 4);
+  holRows.innerHTML = show.map(x => '<div class="hrow">' +
+      '<span class="d">' + esc(x.md) + '</span>' +
+      '<span class="c">' + esc(x.country) + '</span>' +
+      '<span class="n">' + esc(x.name) + '</span>' +
+      '<span class="w">' + (x.inDays === 0 ? '今天' : x.inDays + ' 天后') + '</span></div>').join('');
+  holMore.hidden = list.length <= 4;
+  holMore.textContent = holOpen ? '收起' : '展开';
 }
 function updateBanner(items){
   if (!banner) return;
   const prs = items.filter(i => i.pr);
-  if (!prs.length){ banner.hidden = true; banner.innerHTML = ''; return; }
-  banner.hidden = false;
-  banner.innerHTML = '<b>🕌 礼拜时段</b><span class="dot">·</span>' +
+  const hols = items.filter(i => i.hol && i.hol.length);
+  const parts = [];
+  if (prs.length) parts.push('<b>🕌 礼拜</b><span class="dot">·</span>' +
     prs.map(i => esc(i.c.zh) + ' ' + esc(i.pr.n) + ' ' + hm(i.pr.t)).join('，') +
-    '<span class="dot">·</span>此时不打电话';
+    '<span class="dot">·</span>此时不打电话');
+  if (hols.length) parts.push('<b>🎉 今天放假</b><span class="dot">·</span>' +
+    hols.map(i => esc(i.c.zh) + ' ' + esc(i.hol.join('、'))).join('，'));
+  if (!parts.length){ banner.hidden = true; banner.innerHTML = ''; return; }
+  banner.hidden = false;
+  banner.innerHTML = parts.join('<span class="dot"> ｜ </span>');
 }
 function dayNumberLocal(now){
   const p = partsIn(localTZ, now);
@@ -1199,7 +1325,7 @@ function tick(){
     n.sec.textContent = t.sec;
     n.ampm.textContent = t.ampm;
     const d = dateInfoOf(p, localDay);
-    n.date.textContent = (it.pr ? '🕌 ' : '') + d.text;
+    n.date.textContent = (it.pr ? '🕌 ' : '') + (it.hol && it.hol.length ? '🎉 ' : '') + d.text;
     n.date.classList.toggle('shift', d.delta !== 0);
   }
   if (dirty) render();
@@ -1249,6 +1375,7 @@ board.addEventListener('click', e => {
 btnHour.addEventListener('click', () => { state.hour12 = !state.hour12; save(); syncTools(); render(); });
 btnSec.addEventListener('click', () => { state.showSec = !state.showSec; save(); syncTools(); render(); });
 btnShare.addEventListener('click', copyShare);
+if (holMore) holMore.addEventListener('click', () => { holOpen = !holOpen; renderHolidays(); });
 
 /* =========================================================
    9. 启动
