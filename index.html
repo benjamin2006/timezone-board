@@ -159,7 +159,7 @@ body{
     <div class="tools">
       <button id="btnHour" type="button">24 时制</button>
       <button id="btnSec" type="button">秒</button>
-      <button id="btnOrder" type="button">UTC ↑</button>
+      <button id="btnShare" type="button">分享</button>
     </div>
   </div>
 
@@ -414,16 +414,159 @@ const RAW_CITY = `
 帕皮提|Papeete|法属波利尼西亚|Pacific/Tahiti|
 `;
 
-const DB = RAW_CITY.trim().split(/\n/).map(l => l.trim()).filter(Boolean).map(line => {
-  const [zh, en, country, tz, cap] = line.split('|');
-  return { zh, en, country, tz, capital: cap === '1', key: tz + '|' + zh };
-});
+/* 扩展库：美国各州、南非、加勒比、南美、西非（zh|en|国家|IANA|首都|州/省） */
+const RAW_EXTRA = `
+蒙哥马利|Montgomery|美国|America/Chicago||阿拉巴马
+伯明翰|Birmingham|美国|America/Chicago||阿拉巴马
+安克雷奇|Anchorage|美国|America/Anchorage||阿拉斯加
+凤凰城|Phoenix|美国|America/Phoenix||亚利桑那
+图森|Tucson|美国|America/Phoenix||亚利桑那
+小石城|Little Rock|美国|America/Chicago||阿肯色
+洛杉矶|Los Angeles|美国|America/Los_Angeles||加利福尼亚
+旧金山|San Francisco|美国|America/Los_Angeles||加利福尼亚
+圣迭戈|San Diego|美国|America/Los_Angeles||加利福尼亚
+萨克拉门托|Sacramento|美国|America/Los_Angeles||加利福尼亚
+丹佛|Denver|美国|America/Denver||科罗拉多
+哈特福德|Hartford|美国|America/New_York||康涅狄格
+威尔明顿|Wilmington|美国|America/New_York||特拉华
+迈阿密|Miami|美国|America/New_York||佛罗里达
+奥兰多|Orlando|美国|America/New_York||佛罗里达
+坦帕|Tampa|美国|America/New_York||佛罗里达
+杰克逊维尔|Jacksonville|美国|America/New_York||佛罗里达
+亚特兰大|Atlanta|美国|America/New_York||佐治亚
+檀香山|Honolulu|美国|Pacific/Honolulu||夏威夷
+博伊西|Boise|美国|America/Boise||爱达荷
+芝加哥|Chicago|美国|America/Chicago||伊利诺伊
+印第安纳波利斯|Indianapolis|美国|America/Indiana/Indianapolis||印第安纳
+得梅因|Des Moines|美国|America/Chicago||艾奥瓦
+威奇托|Wichita|美国|America/Chicago||堪萨斯
+路易斯维尔|Louisville|美国|America/Kentucky/Louisville||肯塔基
+新奥尔良|New Orleans|美国|America/Chicago||路易斯安那
+波特兰（缅因）|Portland|美国|America/New_York||缅因
+巴尔的摩|Baltimore|美国|America/New_York||马里兰
+波士顿|Boston|美国|America/New_York||马萨诸塞
+底特律|Detroit|美国|America/Detroit||密歇根
+明尼阿波利斯|Minneapolis|美国|America/Chicago||明尼苏达
+杰克逊|Jackson|美国|America/Chicago||密西西比
+圣路易斯|St. Louis|美国|America/Chicago||密苏里
+堪萨斯城|Kansas City|美国|America/Chicago||密苏里
+比林斯|Billings|美国|America/Denver||蒙大拿
+奥马哈|Omaha|美国|America/Chicago||内布拉斯加
+拉斯维加斯|Las Vegas|美国|America/Los_Angeles||内华达
+康科德|Concord|美国|America/New_York||新罕布什尔
+纽瓦克|Newark|美国|America/New_York||新泽西
+阿尔伯克基|Albuquerque|美国|America/Denver||新墨西哥
+纽约|New York|美国|America/New_York||纽约州
+布法罗|Buffalo|美国|America/New_York||纽约州
+夏洛特|Charlotte|美国|America/New_York||北卡罗来纳
+法戈|Fargo|美国|America/Chicago||北达科他
+哥伦布|Columbus|美国|America/New_York||俄亥俄
+俄克拉何马城|Oklahoma City|美国|America/Chicago||俄克拉何马
+波特兰|Portland|美国|America/Los_Angeles||俄勒冈
+费城|Philadelphia|美国|America/New_York||宾夕法尼亚
+普罗维登斯|Providence|美国|America/New_York||罗得岛
+哥伦比亚（南卡）|Columbia|美国|America/New_York||南卡罗来纳
+苏福尔斯|Sioux Falls|美国|America/Chicago||南达科他
+纳什维尔|Nashville|美国|America/Chicago||田纳西
+孟菲斯|Memphis|美国|America/Chicago||田纳西
+休斯敦|Houston|美国|America/Chicago||德克萨斯
+达拉斯|Dallas|美国|America/Chicago||德克萨斯
+奥斯汀|Austin|美国|America/Chicago||德克萨斯
+圣安东尼奥|San Antonio|美国|America/Chicago||德克萨斯
+埃尔帕索|El Paso|美国|America/Denver||德克萨斯
+盐湖城|Salt Lake City|美国|America/Denver||犹他
+伯灵顿|Burlington|美国|America/New_York||佛蒙特
+里士满|Richmond|美国|America/New_York||弗吉尼亚
+西雅图|Seattle|美国|America/Los_Angeles||华盛顿州
+查尔斯顿|Charleston|美国|America/New_York||西弗吉尼亚
+密尔沃基|Milwaukee|美国|America/Chicago||威斯康星
+夏延|Cheyenne|美国|America/Denver||怀俄明
+华盛顿|Washington|美国|America/New_York|1|哥伦比亚特区
+约翰内斯堡|Johannesburg|南非|Africa/Johannesburg||豪登
+比勒陀利亚|Pretoria|南非|Africa/Johannesburg|1|豪登
+开普敦|Cape Town|南非|Africa/Johannesburg||西开普
+德班|Durban|南非|Africa/Johannesburg||夸祖鲁-纳塔尔
+伊丽莎白港|Gqeberha|南非|Africa/Johannesburg||东开普
+布隆方丹|Bloemfontein|南非|Africa/Johannesburg||自由州
+东伦敦|East London|南非|Africa/Johannesburg||东开普
+内尔斯普雷特|Mbombela|南非|Africa/Johannesburg||普马兰加
+金伯利|Kimberley|南非|Africa/Johannesburg||北开普
+波洛夸内|Polokwane|南非|Africa/Johannesburg||林波波
+勒斯滕堡|Rustenburg|南非|Africa/Johannesburg||西北省
+蒙特哥贝|Montego Bay|牙买加|America/Jamaica||
+太子港|Port-au-Prince|海地|America/Port-au-Prince|1|
+布里奇顿|Bridgetown|巴巴多斯|America/Barbados|1|
+卡斯特里|Castries|圣卢西亚|America/St_Lucia|1|
+圣乔治|St. George's|格林纳达|America/Grenada|1|
+圣约翰|St. John's|安提瓜和巴布达|America/Antigua|1|
+金斯敦（圣文森特）|Kingstown|圣文森特和格林纳丁斯|America/St_Vincent|1|
+罗索|Roseau|多米尼克|America/Dominica|1|
+巴斯特尔|Basseterre|圣基茨和尼维斯|America/St_Kitts|1|
+夏洛特阿马利亚|Charlotte Amalie|美属维尔京群岛|America/St_Thomas|1|
+罗德城|Road Town|英属维尔京群岛|America/Tortola|1|
+威廉斯塔德|Willemstad|库拉索|America/Curacao|1|
+奥拉涅斯塔德|Oranjestad|阿鲁巴|America/Aruba|1|
+菲利普斯堡|Philipsburg|荷属圣马丁|America/Lower_Princes|1|
+乔治敦（开曼）|George Town|开曼群岛|America/Cayman|1|
+科伯恩城|Cockburn Town|特克斯和凯科斯|America/Grand_Turk|1|
+汉密尔顿|Hamilton|百慕大|Atlantic/Bermuda|1|
+法兰西堡|Fort-de-France|马提尼克|America/Martinique|1|
+巴斯特尔（瓜德罗普）|Basse-Terre|瓜德罗普|America/Guadeloupe|1|
+瓦利|The Valley|安圭拉|America/Anguilla|1|
+普利茅斯|Plymouth|蒙特塞拉特|America/Montserrat|1|
+古斯塔维亚|Gustavia|圣巴泰勒米|America/St_Barthelemy|1|
+马里戈特|Marigot|法属圣马丁|America/Marigot|1|
+麦德林|Medellín|哥伦比亚|America/Bogota||
+卡利|Cali|哥伦比亚|America/Bogota||
+马拉开波|Maracaibo|委内瑞拉|America/Caracas||
+瓜亚基尔|Guayaquil|厄瓜多尔|America/Guayaquil||
+昆卡|Cuenca|厄瓜多尔|America/Guayaquil||
+库斯科|Cusco|秘鲁|America/Lima||
+阿雷基帕|Arequipa|秘鲁|America/Lima||
+圣克鲁斯|Santa Cruz|玻利维亚|America/La_Paz||
+萨尔瓦多|Salvador|巴西|America/Bahia||
+累西腓|Recife|巴西|America/Recife||
+马瑙斯|Manaus|巴西|America/Manaus||
+贝洛奥里藏特|Belo Horizonte|巴西|America/Sao_Paulo||
+库里蒂巴|Curitiba|巴西|America/Sao_Paulo||
+福塔莱萨|Fortaleza|巴西|America/Fortaleza||
+阿雷格里港|Porto Alegre|巴西|America/Sao_Paulo||
+科尔多瓦|Córdoba|阿根廷|America/Argentina/Cordoba||
+门多萨|Mendoza|阿根廷|America/Argentina/Mendoza||
+乌斯怀亚|Ushuaia|阿根廷|America/Argentina/Ushuaia||
+瓦尔帕莱索|Valparaíso|智利|America/Santiago||
+安托法加斯塔|Antofagasta|智利|America/Santiago||
+蓬塔阿雷纳斯|Punta Arenas|智利|America/Punta_Arenas||
+卡宴|Cayenne|法属圭亚那|America/Cayenne|1|
+斯坦利|Stanley|福克兰群岛|Atlantic/Stanley|1|
+阿比让|Abidjan|科特迪瓦|Africa/Abidjan||
+亚穆苏克罗|Yamoussoukro|科特迪瓦|Africa/Abidjan|1|
+达喀尔|Dakar|塞内加尔|Africa/Dakar|1|
+巴马科|Bamako|马里|Africa/Bamako|1|
+瓦加杜古|Ouagadougou|布基纳法索|Africa/Ouagadougou|1|
+洛美|Lomé|多哥|Africa/Lome|1|
+科托努|Cotonou|贝宁|Africa/Porto-Novo||
+`;
+
+const DB = (() => {
+  const map = new Map();
+  for (const line of (RAW_CITY + '\n' + RAW_EXTRA).trim().split(/\n/)){
+    const t = line.trim();
+    if (!t) continue;
+    const [zh, en, country, tz, cap, state] = t.split('|');
+    const item = { zh, en, country, tz, capital: cap === '1', state: state || '', key: tz + '|' + zh };
+    map.set(item.key, item);
+  }
+  return [...map.values()];
+})();
+const DB_INDEX = new Map(DB.map((c, i) => [c.key, i]));
 
 /* =========================================================
    2. 时区计算
    ========================================================= */
 const LS_KEY = 'timezone-board-v1';
 const localTZ = (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'Asia/Shanghai';
+const HEAD_TZ = 'Asia/Shanghai';         // 抬头固定显示北京时间
 const DAY_START = 6, NIGHT_START = 18;   // 06:00–17:59 白天，18:00–05:59 夜间
 
 const fmtCache = new Map();
@@ -487,7 +630,7 @@ const addBtn = document.getElementById('addBtn');
 const suggestBox = document.getElementById('suggest');
 const btnHour = document.getElementById('btnHour');
 const btnSec = document.getElementById('btnSec');
-const btnOrder = document.getElementById('btnOrder');
+const btnShare = document.getElementById('btnShare');
 let suggestList = [], toastTimer = null;
 
 /* =========================================================
@@ -535,12 +678,13 @@ try { IANA_LIST = (Intl.supportedValuesOf ? Intl.supportedValuesOf('timeZone') :
 const cityLabelFromTZ = tz => tz.split('/').pop().replace(/_/g, ' ');
 
 function rank(c, n){
-  const zh = norm(c.zh), en = norm(c.en), co = norm(c.country);
+  const zh = norm(c.zh), en = norm(c.en), co = norm(c.country), st = norm(c.state);
   if (zh === n || en === n) return 0;
   if (zh.startsWith(n) || en.startsWith(n)) return 1;
-  if (co.startsWith(n)) return 2;
+  if (st === n) return 2;
+  if (co.startsWith(n) || st.startsWith(n)) return 2;
   if (zh.includes(n) || en.includes(n)) return 3;
-  if (co.includes(n) || norm(c.tz).includes(n)) return 4;
+  if (co.includes(n) || st.includes(n) || norm(c.tz).includes(n)) return 4;
   return 99;
 }
 function suggestions(text){
@@ -600,7 +744,7 @@ function renderSuggest(text){
   const now = new Date();
   suggestBox.innerHTML = list.map((c, i) => {
     const off = offsetMin(c.tz, now);
-    const meta = (c.country && c.country !== 'IANA 时区') ? (c.country + ' · ' + c.tz) : c.tz;
+    const meta = c.state ? (c.country + ' · ' + c.state) : ((c.country && c.country !== 'IANA 时区') ? (c.country + ' · ' + c.tz) : c.tz);
     return '<button class="sug" type="button" data-i="' + i + '">' +
         '<span class="n">' + esc(c.zh) + '</span>' +
         '<span class="m">' + esc(meta) + '</span>' +
@@ -614,6 +758,40 @@ function toast(msg){
   toastEl.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2000);
+}
+
+/* =========================================================
+   5b. 分享链接：把当前列表编码进 URL，另一台设备打开即可复现
+   ========================================================= */
+function shareURL(){
+  const ids = state.cities.map(c => DB_INDEX.get(c.key)).filter(i => typeof i === 'number');
+  const code = ids.map(i => (i + 1).toString(36)).join('.');
+  return location.href.split('#')[0] + '#s=' + code;
+}
+function copyShare(){
+  const url = shareURL();
+  const ok = () => toast('链接已复制，手机或另一台电脑打开即可看到同样的列表');
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(ok, () => window.prompt('复制这个链接到另一台设备打开：', url));
+    } else {
+      window.prompt('复制这个链接到另一台设备打开：', url);
+    }
+  } catch(e){ window.prompt('复制这个链接到另一台设备打开：', url); }
+}
+function importFromHash(){
+  const m = location.hash.match(/[#&]s=([0-9a-z.]+)/i);
+  if (!m) return 0;
+  let added = 0;
+  for (const part of m[1].split('.')){
+    const idx = parseInt(part, 36) - 1;
+    const c = DB[idx];
+    if (!c || !isValidTZ(c.tz)) continue;
+    if (state.cities.some(x => x.key === c.key)) continue;
+    pushCity(c); added++;
+  }
+  if (added) save();
+  return added;
 }
 
 /* =========================================================
@@ -696,14 +874,15 @@ function tick(){
   const now = new Date();
   const localOff = offsetMin(localTZ, now);
   const localDay = dayNumberLocal(now);
-  const lp = partsIn(localTZ, now);
-  const lt = timeParts(lp);
-  nowTime.textContent = lt.hm + lt.sec + (lt.ampm ? ' ' + lt.ampm : '');
-  const offTxt = (localOff < 0 ? 'UTC-' : 'UTC+') +
-    String(Math.floor(Math.abs(localOff) / 60)).padStart(2, '0') + ':' +
-    String(Math.abs(localOff) % 60).padStart(2, '0');
-  nowMeta.textContent = (+lp.month) + '/' + (+lp.day) + ' · ' + offTxt;
-  nowMeta.title = localTZ + ' · ' + offTxt;
+  const hp = partsIn(HEAD_TZ, now);
+  const hOff = offsetMin(HEAD_TZ, now);
+  const ht = timeParts(hp);
+  nowTime.textContent = ht.hm + ht.sec + (ht.ampm ? ' ' + ht.ampm : '');
+  const offTxt = (hOff < 0 ? 'UTC-' : 'UTC+') +
+    String(Math.floor(Math.abs(hOff) / 60)).padStart(2, '0') + ':' +
+    String(Math.abs(hOff) % 60).padStart(2, '0');
+  nowMeta.textContent = '北京 · ' + (+hp.month) + '/' + (+hp.day) + ' · ' + offTxt;
+  nowMeta.title = HEAD_TZ + ' · ' + offTxt;
 
   let dirty = false;
   for (const c of state.cities){
@@ -737,8 +916,6 @@ function syncTools(){
   btnHour.textContent = state.hour12 ? '12 时制' : '24 时制';
   btnHour.setAttribute('aria-pressed', state.hour12 ? 'true' : 'false');
   btnSec.setAttribute('aria-pressed', state.showSec ? 'true' : 'false');
-  btnOrder.textContent = state.desc ? 'UTC ↓' : 'UTC ↑';
-  btnOrder.setAttribute('aria-pressed', state.desc ? 'true' : 'false');
 }
 input.addEventListener('input', () => renderSuggest(input.value));
 input.addEventListener('focus', () => { if (input.value.trim()) renderSuggest(input.value); });
@@ -762,16 +939,21 @@ board.addEventListener('click', e => {
 });
 btnHour.addEventListener('click', () => { state.hour12 = !state.hour12; save(); syncTools(); render(); });
 btnSec.addEventListener('click', () => { state.showSec = !state.showSec; save(); syncTools(); render(); });
-btnOrder.addEventListener('click', () => { state.desc = !state.desc; save(); syncTools(); render(); });
+btnShare.addEventListener('click', copyShare);
 
 /* =========================================================
    9. 启动
    ========================================================= */
 (function init(){
-  if (!load()){
+  const restored = load();
+  const imported = importFromHash();
+  if (!restored && !imported){
     ['Asia/Shanghai|深圳', 'Europe/London|伦敦', 'Asia/Dubai|迪拜', 'America/New_York|纽约', 'America/Sao_Paulo|圣保罗', 'Australia/Sydney|悉尼']
       .forEach(k => { const c = DB.find(x => x.key === k); if (c) pushCity(c); });
     save();
+  } else if (imported){
+    save();
+    setTimeout(() => toast('已载入分享的 ' + imported + ' 个地区'), 700);
   }
   syncTools();
   render();
